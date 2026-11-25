@@ -39,3 +39,24 @@ test('order card and reminder survive reload',async({page})=>{
  await expect(page.locator('[data-orders-open="'+id+'"]')).toBeVisible();
  expect(errors).toEqual([]);
 });
+
+test('order tree toggles and finance preview',async({page})=>{
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('http://127.0.0.1:8080/');
+ const row=page.locator('[data-orders-open]').first();
+ await expect(row).toBeVisible();
+ const id=await row.getAttribute('data-orders-open');
+ const kids=page.locator('[data-orders-kids="'+id+'"]');
+ const initial=await kids.textContent();
+ await kids.click();
+ await expect(kids).not.toHaveText(initial);
+ await kids.click();
+ await expect(kids).toHaveText(initial);
+ const finance=page.locator('[data-orders-finance="'+id+'"]');
+ await finance.click();
+ await expect(finance).toHaveClass(/az-active/);
+ await expect(finance.locator('../..').locator('.az-branch-contents').first()).toBeVisible();
+ await finance.click();
+ await expect(finance).not.toHaveClass(/az-active/);
+ expect(errors).toEqual([]);
+});
