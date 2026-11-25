@@ -60,3 +60,17 @@ test('order tree toggles and finance preview',async({page})=>{
  await expect(finance).not.toHaveClass(/az-active/);
  expect(errors).toEqual([]);
 });
+
+test('transaction editor opens and browser back cancels',async({page})=>{
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('http://127.0.0.1:8080/');
+ await page.locator('[data-orders-open]').first().click();
+ await page.locator('[data-oc-route="quick:payment"]').click();
+ await expect(page.locator('#az-modal')).toHaveClass(/az-visible/);
+ await expect(page.locator('#az-modal-content #az-name')).toBeVisible();
+ await page.goBack();
+ await expect(page.locator('#az-modal')).not.toHaveClass(/az-visible/);
+ await page.goBack();
+ await expect(page.locator('#ot-order-card')).toBeVisible();
+ expect(errors).toEqual([]);
+});
