@@ -1335,8 +1335,12 @@ function projectTransactions(arr){
 function flatOperations(){
  // A presentation-only grouping of the same journal entries; no duplicated records.
  const groups=[
-  {label:'Доходы',tone:'az-green',kinds:['payment','accrual']},
-  {label:'Расходы',tone:'az-red',kinds:['salaryPlan','salaryPay','expense','purchase']},
+  {label:'Начисленная стоимость работ',tone:'az-green',kinds:['accrual']},
+  {label:'Оплаты заказчиков',tone:'az-green',kinds:['payment']},
+  {label:'Начисления зарплаты',tone:'az-red',kinds:['salaryPlan']},
+  {label:'Выплаты зарплаты',tone:'az-red',kinds:['salaryPay']},
+  {label:'Дополнительные расходы',tone:'az-red',kinds:['expense']},
+  {label:'Закупки',tone:'az-red',kinds:['purchase']},
   {label:'Склад · списано',tone:'az-gold',kinds:['stockOut','stockReturn']},
   {label:'Переводы между счетами',tone:'',kinds:['transfer']}
  ];
