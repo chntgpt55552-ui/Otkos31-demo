@@ -74,3 +74,17 @@ test('transaction editor opens and browser back cancels',async({page})=>{
  await expect(page.locator('#ot-order-card')).toBeVisible();
  expect(errors).toEqual([]);
 });
+
+test('PWA service worker and offline reload',async({page,context})=>{
+ await page.goto('http://127.0.0.1:8080/');
+ await page.evaluate(async()=>{await navigator.serviceWorker.ready});
+ await page.reload();
+ await expect.poll(()=>page.evaluate(()=>!!navigator.serviceWorker.controller)).toBe(true);
+ await context.setOffline(true);
+ try{
+ await page.reload();
+ await page.locator('#ot-module-nav [data-module=home]').click();
+ await expect(page.locator('.home-cal-grid button').first()).toBeVisible();
+ await expect(page.locator('#ot-module-page')).not.toContainText('Ошибка главного экрана');
+ }finally{await context.setOffline(false)}
+});
