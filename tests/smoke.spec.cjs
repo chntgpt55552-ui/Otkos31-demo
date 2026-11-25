@@ -200,3 +200,15 @@ test('posted payment updates cash and debt exactly once',async({page})=>{
  await expect.poll(()=>stat('Мне должны')).toBe(Math.max(0,debt-123456));
 
 });
+
+test('release cache replaces obsolete app cache without touching unrelated caches',async({page})=>{
+ await page.goto('http://127.0.0.1:8080/');
+ await page.evaluate(async()=>{
+ await caches.open('otkos31-demo-obsolete-test');
+ await caches.open('unrelated-test');
+ const reg=await navigator.serviceWorker.ready;
+ await reg.unregister();
+ });
+ await page.reload();
+ await expect.poll(()=>page.evaluate(async()=>{const keys=await caches.keys();return keys.includes('otkos31-demo-v126-3-127-preview29')&&!keys.includes('otkos31-demo-obsolete-test')&&keys.includes('unrelated-test')})).toBe(true);
+});
