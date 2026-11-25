@@ -184,4 +184,19 @@ test('posted payment updates cash and debt exactly once',async({page})=>{
  await row.locator('input[data-check]').check();
  await expect.poll(()=>stat('Получено')).toBe(received+123456);
  await expect.poll(()=>stat('Мне должны')).toBe(Math.max(0,debt-123456));
+ await row.locator('.az-grow[data-edit]').click();
+ await expect(page.locator('#az-modal')).toHaveClass(/az-visible/);
+ const amount=page.locator('#az-amount');
+ if(await amount.isEditable()){
+ await amount.fill('2345.67');
+ await page.locator('#az-save').click();
+ await expect(page.locator('#az-error')).not.toBeEmpty();
+ await expect(page.locator('#az-modal')).toHaveClass(/az-visible/);
+ }else{
+ await expect(amount).not.toBeEditable();
+ }
+ await page.goBack();
+ await expect.poll(()=>stat('Получено')).toBe(received+123456);
+ await expect.poll(()=>stat('Мне должны')).toBe(Math.max(0,debt-123456));
+
 });
