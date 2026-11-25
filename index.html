@@ -678,7 +678,8 @@ const validDatabase = d => otRecord(d) && Array.isArray(d.orders) && Array.isArr
  d.journal.every(t => otRecord(t) && otHasId(t.id) && otText(t.kind)) &&
  new Set(d.orders.map(o => String(o.id))).size === d.orders.length &&
  new Set(d.journal.map(t => String(t.id))).size === d.journal.length;
-function readDatabase(raw){if(raw===null)return null;try{const value=JSON.parse(raw);return validDatabase(value)&&!window.otJournalIntegrity(value).length?otNormalizeOrderParents(value):null}catch(_){return null}}
+function otMigrateObjectStatuses(db){for(const o of db.orders){if(o.status==='Исполнено'){o.status='Выполнено';o.statusHistory=[...(o.statusHistory||[]),{from:'Исполнено',to:'Выполнено',reason:'Миграция названия статуса v30',date:new Date().toISOString()}];}}return db;}
+function readDatabase(raw){if(raw===null)return null;try{const value=JSON.parse(raw);return validDatabase(value)&&!window.otJournalIntegrity(value).length?otMigrateObjectStatuses(otNormalizeOrderParents(value)):null}catch(_){return null}}
 let primaryRaw = null, backupRaw = null, storageReadable = true;
 try {
  primaryRaw = window.otStorage.getItem(KEY);
