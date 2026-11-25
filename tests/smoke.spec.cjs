@@ -210,7 +210,7 @@ test('release cache replaces obsolete app cache without touching unrelated cache
  await reg.unregister();
  });
  await page.reload();
- await expect.poll(()=>page.evaluate(async()=>{const keys=await caches.keys();return keys.includes('otkos31-demo-v126-3-127-preview29')&&!keys.includes('otkos31-demo-obsolete-test')&&keys.includes('unrelated-test')})).toBe(true);
+ await expect.poll(()=>page.evaluate(async()=>{const keys=await caches.keys();return keys.includes('otkos31-demo-v126-3-127-preview29.1')&&!keys.includes('otkos31-demo-obsolete-test')&&keys.includes('unrelated-test')})).toBe(true);
 });
 
 test('profit drilldown uses standard financial tree and list',async({page})=>{
