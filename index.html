@@ -1369,9 +1369,9 @@ function render(){
  if(filtered){const values={profit:f.currentProfit,contract:f.accrued,receivable:f.receivable,obligations:f.obligations,work:f.accrued,payments:f.received,salary:f.salaryOwed};const value=Object.prototype.hasOwnProperty.call(values,otFinanceBranch)?values[otFinanceBranch]:state.tx.reduce((n,t)=>n+sum(t),0);$('az-stats').innerHTML='<div class="az-stat"><span class="az-muted">'+escape(otBranchLabels[otFinanceBranch])+'</span><strong>'+(value==null?'Не рассчитано':money(value))+'</strong></div>';}
  document.querySelectorAll('#az-app [data-mode]').forEach(b=>b.classList.toggle('active',b.dataset.mode===state.mode));
  let html='';
- if(state.mode==='tree'){const all=state.tx;state.tx=all.filter(t=>!window.otTxInPeriod||window.otTxInPeriod(t));try{html=projectTransactions(state.tx)}finally{state.tx=all}html+=orderTotalsFooter(all)}
- else if(state.mode==='list'){const all=state.tx;state.tx=all.filter(t=>!window.otTxInPeriod||window.otTxInPeriod(t));try{html=flatOperations()}finally{state.tx=all}html+=orderTotalsFooter(all)}
- else{html=calcView()}
+ if(state.mode==='tree'){const all=state.tx;state.tx=all.filter(t=>!window.otTxInPeriod||window.otTxInPeriod(t));try{html=projectTransactions(state.tx)}finally{state.tx=all}if(!filtered)html+=orderTotalsFooter(all)}
+ else if(state.mode==='list'){const all=state.tx;state.tx=all.filter(t=>!window.otTxInPeriod||window.otTxInPeriod(t));try{html=flatOperations()}finally{state.tx=all}if(!filtered)html+=orderTotalsFooter(all)}
+ else{state.tx=full;html=calcView()}
 state.tx=full;$('az-content').innerHTML=(filtered?'<button id="ot-clear-branch" class="az-branch-clear">Все транзакции ›</button>':'')+html;if(filtered)$('ot-clear-branch').onclick=()=>{otFinanceBranch='finance';$('az-project-subtitle').textContent='Заказы / '+currentOrder().name;render()};renderEditor()}
 function rebalance(kind){return true} // Legacy auto-generated payment balances disabled.
 function openTransaction(){otNavigation.open('transaction', {order:activeOrder, id:editor.id ?? null});}
