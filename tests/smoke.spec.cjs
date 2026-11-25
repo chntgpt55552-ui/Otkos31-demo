@@ -210,5 +210,19 @@ test('release cache replaces obsolete app cache without touching unrelated cache
  await reg.unregister();
  });
  await page.reload();
- await expect.poll(()=>page.evaluate(async()=>{const keys=await caches.keys();return keys.includes('otkos31-demo-v126-3-127-preview29')&&!keys.includes('otkos31-demo-obsolete-test')&&keys.includes('unrelated-test')})).toBe(true);
+ await expect.poll(()=>page.evaluate(async()=>{const keys=await caches.keys();return keys.includes('otkos31-demo-v126-3-127-preview29.1')&&!keys.includes('otkos31-demo-obsolete-test')&&keys.includes('unrelated-test')})).toBe(true);
+});
+
+test('profit drilldown uses standard financial tree and list',async({page})=>{
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('http://127.0.0.1:8080/');
+ await page.locator('[data-orders-open]').first().click();
+ await page.locator('[data-oc-fin="profit"]').click();
+ await expect(page.locator('#az-stats')).not.toContainText('операций');
+ await expect(page.locator('#az-content .az-nodehead').first()).toBeVisible();
+ await page.locator('#az-app [data-mode=list]').click();
+ await expect(page.locator('#az-content .az-flat-group').first()).toBeVisible();
+ await page.locator('#ot-clear-branch').click();
+ await expect(page.locator('#az-stats')).toContainText('Получено');
+ expect(errors).toEqual([]);
 });
