@@ -167,3 +167,21 @@ test('pending payment persists after reload',async({page})=>{
  await expect(payment.locator('.az-tx').filter({hasText:/2\s?345[,.]67/})).toHaveCount(1);
  expect(await page.locator('#az-stats').innerText()).toBe(before);
 });
+
+test('posted payment updates cash and debt exactly once',async({page})=>{
+ await page.goto('http://127.0.0.1:8080/');
+ await page.locator('[data-orders-open]').first().click();
+ await page.locator('[data-oc-route="quick:payment"]').click();
+ const stat=async label=>Math.round(Number((await page.locator('#az-stats .az-stat').filter({hasText:label}).locator('strong').innerText()).replace(/[^0-9,.]/g,'').replace(',','.'))*100);
+ const received=await stat('Получено'), debt=await stat('Мне должны');
+ await page.locator('#az-name').selectOption({index:1});
+ await page.locator('#az-amount').fill('1234.56');
+ await page.locator('#az-save').click();
+ await expect(page.locator('#az-modal')).not.toHaveClass(/az-visible/);
+ await page.locator('#az-app [data-mode=list]').click();
+ const row=page.locator('.az-flat-group').filter({has:page.locator('.az-flat-heading').filter({hasText:'Оплаты заказчиков'})}).locator('.az-tx').filter({hasText:/1[^0-9]*234[,.]56/});
+ await expect(row).toHaveCount(1);
+ await row.locator('input[data-check]').check();
+ await expect.poll(()=>stat('Получено')).toBe(received+123456);
+ await expect.poll(()=>stat('Мне должны')).toBe(Math.max(0,debt-123456));
+});
