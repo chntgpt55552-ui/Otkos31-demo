@@ -144,6 +144,7 @@ test('pending payment persists after reload',async({page})=>{
  await page.goto('http://127.0.0.1:8080/');
  await page.locator('[data-orders-open]').first().click();
  await page.locator('[data-oc-route="quick:payment"]').click();
+ const before=await page.locator('#az-stats').innerText();
  const name=page.locator('#az-name');
  await name.selectOption({index:1});
  await page.locator('#az-amount').fill('1234.56');
@@ -153,6 +154,7 @@ test('pending payment persists after reload',async({page})=>{
  const payment=page.locator('.az-flat-group').filter({has:page.locator('.az-flat-heading').filter({hasText:'Оплаты заказчиков'})});
  const row=payment.locator('.az-tx').filter({hasText:/1\s?234[,.]56/});
  await expect(row).toHaveCount(1);
+ expect(await page.locator('#az-stats').innerText()).toBe(before);
  await page.reload();
  await page.locator('#az-app [data-mode=list]').click();
  await expect(row).toHaveCount(1);
@@ -163,4 +165,5 @@ test('pending payment persists after reload',async({page})=>{
  await expect(page.locator('#az-modal')).not.toHaveClass(/az-visible/);
  await expect(row).toHaveCount(0);
  await expect(payment.locator('.az-tx').filter({hasText:/2\s?345[,.]67/})).toHaveCount(1);
+ expect(await page.locator('#az-stats').innerText()).toBe(before);
 });
