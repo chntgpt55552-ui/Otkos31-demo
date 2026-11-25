@@ -1,7 +1,7 @@
 name: Browser smoke
 on:
   push:
-    branches: [stabilization-v29]
+    branches: [stabilization-v29, finance-unified-v29, status-v30, main]
   pull_request:
   workflow_dispatch:
 permissions:
