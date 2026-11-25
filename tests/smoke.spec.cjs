@@ -88,3 +88,16 @@ test('PWA service worker and offline reload',async({page,context})=>{
  await expect(page.locator('#ot-module-page')).not.toContainText('Ошибка главного экрана');
  }finally{await context.setOffline(false)}
 });
+
+test('flat ledger separates accruals and payments',async({page})=>{
+ await page.goto('http://127.0.0.1:8080/');
+ await page.locator('[data-orders-open]').first().click();
+ await page.locator('[data-oc-route="finance"]').click();
+ await page.locator('#az-app [data-mode=list]').click();
+ const headings=page.locator('#az-content .az-flat-heading');
+ for(const name of ['Начисленная стоимость работ','Оплаты заказчиков','Начисления зарплаты','Выплаты зарплаты']){
+ await expect(headings.filter({hasText:name})).toHaveCount(1);
+ }
+ await expect(headings.filter({hasText:/^Доходы/})).toHaveCount(0);
+ await expect(headings.filter({hasText:/^Расходы/})).toHaveCount(0);
+});
