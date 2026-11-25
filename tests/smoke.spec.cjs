@@ -156,4 +156,11 @@ test('pending payment persists after reload',async({page})=>{
  await page.reload();
  await page.locator('#az-app [data-mode=list]').click();
  await expect(row).toHaveCount(1);
+ await row.locator('.az-grow[data-edit]').click();
+ await expect(page.locator('#az-modal')).toHaveClass(/az-visible/);
+ await page.locator('#az-amount').fill('2345.67');
+ await page.locator('#az-save').click();
+ await expect(page.locator('#az-modal')).not.toHaveClass(/az-visible/);
+ await expect(row).toHaveCount(0);
+ await expect(payment.locator('.az-tx').filter({hasText:/2\s?345[,.]67/})).toHaveCount(1);
 });
