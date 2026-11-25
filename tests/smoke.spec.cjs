@@ -139,3 +139,21 @@ test('pending payment can be created and edited',async({page})=>{
  await page.locator('#az-app [data-mode=list]').click();
  await expect(page.locator('.az-tx').filter({hasText:/1[^0-9]*235[,.]67/}).first()).toBeVisible();
 });
+
+test('pending payment persists after reload',async({page})=>{
+ await page.goto('http://127.0.0.1:8080/');
+ await page.locator('[data-orders-open]').first().click();
+ await page.locator('[data-oc-route="quick:payment"]').click();
+ const name=page.locator('#az-name');
+ await name.selectOption({index:1});
+ await page.locator('#az-amount').fill('1234.56');
+ await page.locator('#az-save').click();
+ await expect(page.locator('#az-modal')).not.toHaveClass(/az-visible/);
+ await page.locator('#az-app [data-mode=list]').click();
+ const payment=page.locator('.az-flat-group').filter({has:page.locator('.az-flat-heading').filter({hasText:'Оплаты заказчиков'})});
+ const row=payment.locator('.az-tx').filter({hasText:/1\s?234[,.]56/});
+ await expect(row).toHaveCount(1);
+ await page.reload();
+ await page.locator('#az-app [data-mode=list]').click();
+ await expect(row).toHaveCount(1);
+});
