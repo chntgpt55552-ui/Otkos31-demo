@@ -101,3 +101,19 @@ test('flat ledger separates accruals and payments',async({page})=>{
  await expect(headings.filter({hasText:/^Доходы/})).toHaveCount(0);
  await expect(headings.filter({hasText:/^Расходы/})).toHaveCount(0);
 });
+
+test('flat ledger subtotals reconcile with individual rows',async({page})=>{
+ await page.goto('http://127.0.0.1:8080/');
+ await page.locator('[data-orders-open]').first().click();
+ await page.locator('[data-oc-route="finance"]').click();
+ await page.locator('#az-app [data-mode=list]').click();
+ const groups=page.locator('#az-content .az-flat-group');
+ const parse=s=>Math.round(Number(s.replace(/[^0-9,.]/g,'').replace(',','.'))*100);
+ for(const name of ['Начисленная стоимость работ','Оплаты заказчиков','Начисления зарплаты','Выплаты зарплаты']){
+ const group=groups.filter({has:page.locator('.az-flat-heading').filter({hasText:name})});
+ await expect(group).toHaveCount(1);
+ const amounts=await group.locator('.az-tx .az-amount').allTextContents();
+ const subtotal=parse(await group.locator('.az-flat-heading .az-num').textContent());
+ expect(subtotal).toBe(amounts.reduce((a,v)=>a+parse(v),0));
+ }
+});
