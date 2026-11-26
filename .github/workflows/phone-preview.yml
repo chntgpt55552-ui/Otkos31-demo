@@ -2,6 +2,8 @@ name: Phone preview
 on:
   push:
     branches: [feature/measurement-spec-3]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
