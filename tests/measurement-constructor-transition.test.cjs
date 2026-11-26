@@ -134,3 +134,30 @@ test('duplicate installation movement is rejected',()=>{
  require('../prepared-stock.js');
  assert.throws(()=>globalThis.OtPreparedStock.consume({id:'x',orderId:'a',material:{id:'m'},unit:'м²',qty:1,date:'2026-11-27',brigadeId:'b',workId:'w'},{issues:[]},[{id:'install:x'}]),/Монтаж уже проведён/);
 });
+
+
+test('prepared consumption rejects excess and calculates weighted material cost',()=>{
+ require('../prepared-stock.js');
+ const old=globalThis.otMaterialCore;
+ try {
+ globalThis.otMaterialCore={units:()=>[{name:'м²',factor:6}]};
+ const args={id:'x',orderId:'a',material:{id:'m',name:'Panel',unit:'шт'},unit:'м²',qty:3,date:'2026-11-27',brigadeId:'b',workId:'w'};
+ const report={issues:[],rows:[{id:'m',average:1200,locations:{'prepared:a':0.5}}]};
+ const consume=globalThis.OtPreparedStock.consume;
+ assert.throws(()=>consume({...args,qty:3.01},report,[]),/Недостаточно/);
+ const entry=consume(args,report,[]);
+ assert.equal(entry.price,200);
+ assert.equal(entry.amount,600);
+ assert.equal(entry.orderId,'a');
+ assert.equal(entry.location,'prepared:a');
+ } finally {globalThis.otMaterialCore=old;}
+});
+test('existing salary accrual prevents duplicate stage wage',()=>{
+ require('../brigade-stage.js');
+ const old=globalThis.OtBrigadeWork;
+ try {
+ globalThis.OtBrigadeWork={confirm:()=>[]};
+ const args={journal:[{kind:'salaryPlan',orderId:'a',workId:'w'}],materials:[],event:{id:'e',brigadeId:'b',workId:'w',qty:2},work:{id:'w',orderId:'a'},brigade:{id:'b',members:[]},rate:100};
+ assert.throws(()=>globalThis.OtBrigadeStage.prepare(args),/существующее плановое начисление/);
+ } finally {globalThis.OtBrigadeWork=old;}
+});
