@@ -99,3 +99,19 @@ test('7200 mm requires manual segmentation and preserves total length and area',
  assert.equal(result.unplaced.length,0);
  assert.equal(result.sheets.flatMap(s=>s.parts).reduce((n,p)=>n+p.length*p.depth,0),2500000);
 });
+
+
+test('allocation conserves stock across orders for every small inventory combination',()=>{
+ require('../cutting-stock.js');
+ const {allocate}=globalThis.OtCutStock;
+ for(let available=0;available<=5;available++)for(let incoming=0;incoming<=5;incoming++)
+ for(let a=0;a<=5;a++)for(let b=0;b<=5;b++){
+  const demands=[{orderId:'a',required:a},{orderId:'b',required:b}];
+  const rows=allocate({available,incoming,demands});
+  const sum=k=>rows.reduce((n,r)=>n+r[k],0);
+  assert.equal(sum('onHand'),Math.min(available,a+b));
+  assert.equal(sum('expected'),Math.min(incoming,Math.max(0,a+b-available)));
+  assert.equal(sum('toPurchase'),Math.max(0,a+b-available-incoming));
+  for(const row of rows)assert.equal(row.onHand+row.expected+row.toPurchase,row.required);
+ }
+});
