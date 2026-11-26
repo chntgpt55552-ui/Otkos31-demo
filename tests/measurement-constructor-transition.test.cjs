@@ -115,3 +115,22 @@ test('allocation conserves stock across orders for every small inventory combina
   for(const row of rows)assert.equal(row.onHand+row.expected+row.toPurchase,row.required);
  }
 });
+
+
+test('prepared stock cannot be used as cutting raw material',()=>{
+ require('../cutting-stock.js');
+ assert.throws(()=>globalThis.OtCutStock.resolve({report:{issues:[]},location:'prepared:a',width:3000,height:1500}),/Готовые детали/);
+});
+test('prepared details are transferred without recognizing an expense',()=>{
+ require('../prepared-stock.js');
+ const row=globalThis.OtPreparedStock.prepare({kind:'stockOut',cutMovement:'detail',done:true,orderId:'a',location:'main',amount:500,price:100});
+ assert.equal(row.kind,'stockMove');
+ assert.equal(row.toLocation,'prepared:a');
+ assert.equal(row.preparedOrderId,'a');
+ assert.equal(row.orderId,null);
+ assert.equal(row.amount,0);
+});
+test('duplicate installation movement is rejected',()=>{
+ require('../prepared-stock.js');
+ assert.throws(()=>globalThis.OtPreparedStock.consume({id:'x',orderId:'a',material:{id:'m'},unit:'м²',qty:1,date:'2026-11-27',brigadeId:'b',workId:'w'},{issues:[]},[{id:'install:x'}]),/Монтаж уже проведён/);
+});
