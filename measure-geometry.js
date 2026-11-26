@@ -8,9 +8,8 @@ function expand(part){
  const pieces=part.pieces;
  if(pieces!=null&&!Array.isArray(pieces))throw Error('Некорректные составляющие');
  if(!pieces||!pieces.length){
-  const count=Math.ceil(part.length/MAX);
-  if(count>10000)throw Error('Слишком много составляющих');
-  return Array.from({length:count},(_,i)=>({...part,pieces:undefined,segment:i+1,length:Math.min(MAX,part.length-i*MAX)}));
+  if(part.length>MAX)throw Error('Разбейте деталь на составляющие');
+  return [{...part,pieces:undefined,segment:1}];
  }
  let sum=0;
  const out=pieces.map((p,i)=>{
