@@ -979,8 +979,8 @@ function otMoneyCorrection(original, journal, date, reason, id){
  if(original.kind==='transfer'){if(amount<=0||!otAccounts.includes(original.destination)||original.destination===original.account)throw Error('Некорректный перевод');t.destination=original.account;}
  return t;
 }
-function otAccountReport(arr) {
- const balances = Object.fromEntries(otAccounts.map(a => [a, 0]));
+function otAccountReport(arr, accountIds = otAccounts) {
+ const balances = Object.fromEntries(accountIds.map(a => [a, 0]));
  let unknown = 0;
  const issues = [];
  const incoming = new Set(['payment', 'openingBalance', 'balanceAdjustment', 'supplierRefund', 'purchasePaymentReversal']);
@@ -989,7 +989,7 @@ function otAccountReport(arr) {
   try {
    const cents = otLineCents(t);
    if (t.kind === 'transfer') {
-    if (!otAccounts.includes(t.account) || !otAccounts.includes(t.destination) ||
+    if (!accountIds.includes(t.account) || !accountIds.includes(t.destination) ||
         t.account === t.destination || cents <= 0) throw Error('Некорректный перевод');
     if (!Number.isSafeInteger(balances[t.account] - cents) ||
         !Number.isSafeInteger(balances[t.destination] + cents)) throw Error('Переполнение остатка');
@@ -997,7 +997,7 @@ function otAccountReport(arr) {
     balances[t.destination] += cents;
    } else {
     const delta = incoming.has(t.kind) ? cents : -cents;
-    if (otAccounts.includes(t.account)) {
+    if (accountIds.includes(t.account)) {
      if (!Number.isSafeInteger(balances[t.account] + delta)) throw Error('Переполнение остатка');
      balances[t.account] += delta;
     } else {
@@ -1010,6 +1010,13 @@ function otAccountReport(arr) {
  return {balances:Object.fromEntries(Object.entries(balances).map(([k,v]) => [k,v / 100])),
   unknown:unknown / 100, issues};
 }
+
+function otAccountTreeReport(arr, records) {
+ const accounts=otAccountMigration(records,arr);
+ const report=otAccountReport(arr,accounts.map(r=>r.id));
+ return {...report,tree:otAccountTree(accounts,report.balances)};
+}
+window.otAccountTreeReport=otAccountTreeReport;
 
 function cashTotalsFor(arr, {orderScope = false} = {}) {
  const paid = kind => otTotalCents(arr.filter(t => t.kind === kind && txSettled(t)));
