@@ -5,3 +5,6 @@ const html=fs.readFileSync('index.html','utf8');
 const styles=[...html.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi)].map(x=>x[1]);
 let pos=0;for(const style of styles){if(fp(style)===baseline[pos])pos++;}
 if(pos!==baseline.length){console.error('UI baseline changed: review required. Matched '+pos+'/'+baseline.length);process.exitCode=1;}else console.log('Existing style blocks preserved. Visual review still required.');
+
+const requiredIds=["orders-screen","orders-tree","ot-order-card","oc-back","oc-summary","oc-info","oc-accordions","az-app","az-content","az-editor","az-modal-save-top","ot-module-nav","ot-module-page","ot-export","ot-import"];
+for(const id of requiredIds){const count=html.split('id="'+id+'"').length-1;if(count!==1){console.error('UI anchor missing or duplicated: '+id);process.exitCode=1;}}
