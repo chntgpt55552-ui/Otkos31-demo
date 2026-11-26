@@ -534,6 +534,27 @@ function otAccountEdit(records,journal,action,entry){
  otAccountTree(next);return next;
 }
 window.otAccountEdit=otAccountEdit;
+const otFinanceScopes=Object.freeze(['business','household']);
+function otFinanceScope(record){
+ const scope=record.scopeId??'business';
+ if(!otFinanceScopes.includes(scope))throw Error('Неизвестный финансовый контур');
+ return scope;
+}
+function otFinancePartition(records,scope){
+ if(!otFinanceScopes.includes(scope))throw Error('Неизвестный финансовый контур');
+ return records.filter(r=>otFinanceScope(r)===scope);
+}
+function otFinanceAccountTree(records,scope,balances={}){
+ const map=new Map(records.map(r=>[r.id,r]));
+ for(const r of records){
+  if(r.parentId!=null&&(!map.has(r.parentId)||otFinanceScope(map.get(r.parentId))!==otFinanceScope(r)))throw Error('Счета разных контуров нельзя объединять в ветку');
+ }
+ return otAccountTree(otFinancePartition(records,scope),balances);
+}
+window.otFinanceScope=otFinanceScope;
+window.otFinancePartition=otFinancePartition;
+window.otFinanceAccountTree=otFinanceAccountTree;
+
 
 
 const otCashKinds = new Set(['toolPurchase','payment', 'salaryPay', 'purchase', 'expense', 'transfer',
