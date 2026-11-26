@@ -662,25 +662,35 @@ function otProtectPosted(previous, journal, allowBrigadeMigration) {
  }
 }
 
+const otPendingWriteKey='otkos31_pending_write_v1';
+function otRecoverPendingWrite(store){
+ const raw=store.getItem(otPendingWriteKey);
+ if(raw===null)return;
+ const rows=JSON.parse(raw);
+ if(!Array.isArray(rows)||!rows.every(r=>Array.isArray(r)&&r.length===2&&typeof r[0]==='string'&&r[0]!==otPendingWriteKey&&(r[1]===null||typeof r[1]==='string')))throw Error('Повреждён журнал восстановления');
+ for(const [key,old] of rows){if(old===null)store.removeItem(key);else store.setItem(key,old);}
+ store.removeItem(otPendingWriteKey);
+}
 function otWriteStorage(changes) {
- const pending = changes.map(([store, key, raw]) => [store, key, raw, store.getItem(key)])
-  .filter(([, , raw, old]) => raw !== old);
- const written = [];
- try {
-  for (const [store, key, raw, old] of pending) {
-   if (raw === null) store.removeItem(key);
-   else store.setItem(key, raw);
-   written.push([store, key, old]);
+ const durable=window.otStorage;
+ if(durable.getItem(otPendingWriteKey)!==null)throw Error('Требуется восстановление незавершённой записи');
+ const pending=changes.map(([store,key,raw])=>[store,key,raw,store.getItem(key)]).filter(([, ,raw,old])=>raw!==old);
+ const undo=pending.filter(([store])=>store===durable).map(([,key,,old])=>[key,old]);
+ const written=[];
+ if(undo.length)durable.setItem(otPendingWriteKey,JSON.stringify(undo));
+ try{
+  for(const [store,key,raw,old] of pending){
+   if(raw===null)store.removeItem(key);else store.setItem(key,raw);
+   written.push([store,key,old]);
   }
- } catch (error) {
-  const failures = [];
-  for (const [store, key, old] of written.reverse()) {
-   try {
-    if (old === null) store.removeItem(key);
-    else store.setItem(key, old);
-   } catch (_) { failures.push(key); }
+  if(undo.length)durable.removeItem(otPendingWriteKey);
+ }catch(error){
+  const failures=[];
+  for(const [store,key,old] of written.reverse()){
+   try{if(old===null)store.removeItem(key);else store.setItem(key,old);}catch(_){failures.push(key);}
   }
-  if (failures.length) throw Error('Не удалось откатить: ' + failures.join(', '));
+  if(failures.length)throw Error('Не удалось откатить: '+failures.join(', '));
+  if(undo.length)durable.removeItem(otPendingWriteKey);
   throw error;
  }
 }
@@ -776,6 +786,7 @@ const validDatabase = d => otRecord(d) && Array.isArray(d.orders) && Array.isArr
 function readDatabase(raw){if(raw===null)return null;try{const value=JSON.parse(raw);return validDatabase(value)&&!window.otJournalIntegrity(value).length?otNormalizeOrderParents(value):null}catch(_){return null}}
 let primaryRaw = null, backupRaw = null, storageReadable = true;
 try {
+ otRecoverPendingWrite(window.otStorage);
  primaryRaw = window.otStorage.getItem(KEY);
  backupRaw = window.otStorage.getItem(BACKUP_KEY);
 } catch (_) { storageReadable = false; }
