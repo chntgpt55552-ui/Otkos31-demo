@@ -508,6 +508,33 @@ function otAccountMigration(records,journal){
  otAccountTree(result);return result;
 }
 window.otAccountMigration=otAccountMigration;
+function otAccountEdit(records,journal,action,entry){
+ const next=records.map(r=>({...r})),i=next.findIndex(r=>r.id===entry.id);
+ if(action==='create'){
+  if(i>=0||!entry.id)throw Error('Повтор ID счёта');
+  if(entry.parentId!=null&&next.find(r=>r.id===entry.parentId)?.archived)throw Error('Родитель в архиве');
+  next.push({id:entry.id,name:entry.name,parentId:entry.parentId??null,archived:false});
+ }else{
+  if(i<0)throw Error('Счёт не найден');
+  const old=next[i],used=journal.some(t=>t.account===old.id||t.destination===old.id),children=next.some(r=>r.parentId===old.id);
+  if(action==='delete'){
+   if(used||children||otLedgerAccounts.includes(old.id))throw Error('Счёт защищён историей или структурой');
+   next.splice(i,1);
+  }else if(action==='edit'){
+   if(entry.parentId!=null&&next.find(r=>r.id===entry.parentId)?.archived)throw Error('Родитель в архиве');
+   next[i]={...old,name:entry.name??old.name,parentId:entry.parentId===undefined?old.parentId:entry.parentId};
+  }else if(action==='archive'){
+   if(next.some(r=>r.parentId===old.id&&!r.archived))throw Error('Сначала архивируйте подсчета');
+   next[i]={...old,archived:true};
+  }else if(action==='restore'){
+   if(next.find(r=>r.id===old.parentId)?.archived)throw Error('Сначала восстановите родителя');
+   next[i]={...old,archived:false};
+  }else throw Error('Неизвестное действие');
+ }
+ otAccountTree(next);return next;
+}
+window.otAccountEdit=otAccountEdit;
+
 
 const otCashKinds = new Set(['toolPurchase','payment', 'salaryPay', 'purchase', 'expense', 'transfer',
  'openingBalance', 'balanceAdjustment', 'supplierRefund', 'purchasePaymentReversal']);
