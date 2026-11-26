@@ -5,6 +5,9 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+concurrency:
+  group: phone-preview-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
@@ -28,9 +31,15 @@ jobs:
           h=h.replace('const sw=navigator.serviceWorker','const sw=null')
           h=h.replace('v127-preview31.0','TEST • isolated preview')
           h=h.replace('window.localStorage.getItem(key)','window.localStorage.getItem("preview:"+key)').replace('window.localStorage.setItem(key, value)','window.localStorage.setItem("preview:"+key, value)').replace('window.localStorage.removeItem(key)','window.localStorage.removeItem("preview:"+key)')
+          assert not re.search(r'<script[^>]+src=',h)
+          assert 'const sw=null' in h
+          assert h.count('"preview:"+key') == 3
+          assert 'TEST • isolated preview' in h
           (root/'preview'/'OTKOS31_TEST.html').write_text(h)
+          import os
+          (root/'preview'/'BUILD.txt').write_text(os.environ['GITHUB_SHA']+'\n')
           PY
       - uses: actions/upload-artifact@v4
         with:
           name: OTKOS31-phone-preview
-          path: preview/OTKOS31_TEST.html
+          path: preview/
