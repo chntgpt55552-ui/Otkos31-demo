@@ -1212,7 +1212,8 @@ function orderProfitFor(arr){
  const discounts = arr.filter(t => t.kind === 'orderDiscount' && workIds.has(String(t.workId)));
  const planned = otTotalCents(work) - otTotalCents(discounts);
  const contract = otTotalCents(work) - otTotalCents(discounts.filter(txSettled));
- const earned = otTotalCents(completed) - otTotalCents(discounts.filter(t => txSettled(t) && completedIds.has(String(t.workId))));
+ const fractions=new Map(work.map(w=>{const qty=Number(w.qty);const done=arr.filter(t=>t.kind==='salaryPlan'&&t.stageId&&String(t.workId)===String(w.id)).reduce((n,t)=>n+Number(t.qty),0);return [String(w.id),txSettled(w)?1:Number.isFinite(qty)&&qty>0&&Number.isFinite(done)?Math.max(0,Math.min(1,done/qty)):0];}));
+ const earned = work.reduce((n,t)=>n+Math.round(otLineCents(t)*(fractions.get(String(t.id))||0)),0)-discounts.filter(txSettled).reduce((n,t)=>n+Math.round(otLineCents(t)*(fractions.get(String(t.workId))||0)),0);
  const salary = arr.filter(t => t.kind === 'salaryPlan');
  const salaryAll = otTotalCents(salary);
  const name = t => String(t.name || '').trim().toLowerCase();
@@ -1223,7 +1224,7 @@ function orderProfitFor(arr){
   completedIds.has(String(t.workId)) : !!name(t) && counts.get(name(t)) === 1 && completeNames.has(name(t));
  const salaryAssigned = t => t.workId != null && t.workId !== '' ?
   workIds.has(String(t.workId)) : counts.get(name(t)) === 1;
- const salaryMatched = otTotalCents(salary.filter(salaryLinked));
+ const salaryMatched = otTotalCents(salary.filter(t=>salaryLinked(t)||(t.stageId&&workIds.has(String(t.workId)))));
  const stock = arr.filter(t => ['stockOut','stockReturn'].includes(t.kind));
  const extras = arr.filter(t => t.kind === 'expense' || (t.kind==='toolPurchase' && t.orderId==null));
  const tax = arr.filter(t => t.kind === 'tax');
@@ -1237,7 +1238,7 @@ function orderProfitFor(arr){
  const unallocated = !allComplete && completed.length > 0 &&
   (stockUsed !== 0 || extraActual !== 0 || taxActual !== 0 || salary.some(t => !salaryAssigned(t) && otLineCents(t) !== 0));
  const current = allComplete ? earned - salaryAll - stockUsed - extraActual - taxActual :
-  completed.length ? earned - salaryMatched - stockUsed - extraActual - taxActual :
+  (completed.length||earned!==0||salaryMatched!==0) ? earned - salaryMatched - stockUsed - extraActual - taxActual :
   -stockUsed - extraActual - taxActual;
  const forecast = planned - salaryAll - stockUsed - stockExpected - extraAll - taxAll;
  const unresolvedStockCosts = stock.filter(t => t.kind === 'stockOut' && txSettled(t) && t.stockCost == null)
