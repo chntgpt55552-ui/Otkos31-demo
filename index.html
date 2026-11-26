@@ -1981,7 +1981,7 @@ window.otReturnToSupplier = request => {
 
 window.otReceiveSupplierRefund = ({id, returnId, account, amount, date, comment = ''}) => {
  const original = database.journal.find(t => String(t.id) === String(returnId) && t.kind === 'supplierReturn');
- if (!original || typeof amount !== 'number' || !otLedgerAccounts.includes(account) ||
+ if (!original || typeof amount !== 'number' || !window.otAccountRegistry.options().some(r=>r.id===account) ||
      !otDateValid(date) || date < original.date || typeof comment !== 'string') {
   throw Error('Укажите проведённый возврат поставщику, сумму, счёт и дату');
  }
@@ -2015,7 +2015,7 @@ window.otPostOrderDiscount = ({id, workId, amount, date, reason}) => {
 
 window.otRecordCommission = ({id, orderId, account, amount, date, paid = false, confirmed = false, comment = ''}) => {
  const order = database.orders.find(o => String(o.id) === String(orderId));
- if (!order || !otDateValid(date) || !otLedgerAccounts.includes(account) ||
+ if (!order || !otDateValid(date) || !window.otAccountRegistry.options().some(r=>r.id===account) ||
      typeof amount !== 'number' || otExactCents(amount) <= 0 || typeof paid !== 'boolean' ||
      typeof confirmed !== 'boolean' || typeof comment !== 'string') throw Error('Некорректная комиссия');
  return otCommitEntries([{id, orderId:order.id, kind:'expense', costType:'commission',
@@ -2321,7 +2321,7 @@ function otSupplierStockTerms(t, lot, material, quantity) {
  if (lot.reversed || otQtyExceeds(quantity, remaining)) throw Error('Превышен остаток исходной закупки');
  if (t.kind === 'purchaseReversal' &&
      (lot.returned > 0 || !otQtyEqual(quantity, lot.quantity) || lot.entry.orderId != null ||
-      !otLedgerAccounts.includes(lot.entry.account))) {
+      !(id=>window.otAccountRegistry ? window.otAccountRegistry.read().some(r=>r.id===id&&window.otFinanceScope(r)==='business') : otLedgerAccounts.includes(id))(lot.entry.account))) {
   throw Error('Закупка недоступна для полного сторно');
  }
  return otProrate(lot.cents, lot.returned + quantity, lot.quantity) - lot.credited;
@@ -2333,7 +2333,7 @@ function otApplySupplierCash(t, claims) {
  if (!record || String(t.purchaseId) !== String(record.entry.purchaseId) ||
      reversal !== (record.entry.kind === 'purchaseReversal') || t.counterparty !== record.entry.counterparty ||
      !otDateValid(t.date) || t.date < record.entry.date || t.orderId != null ||
-     !otLedgerAccounts.includes(t.account) || t.done !== true || t.paid !== true ||
+     !(id=>window.otAccountRegistry ? window.otAccountRegistry.read().some(r=>r.id===id&&window.otFinanceScope(r)==='business') : otLedgerAccounts.includes(id))(t.account) || t.done !== true || t.paid !== true ||
      (reversal && (t.account !== record.purchase.account || t.date !== record.entry.date))) {
   throw Error('Связь поступления с возвратом или счётом');
  }
