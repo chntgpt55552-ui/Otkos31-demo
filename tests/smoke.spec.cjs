@@ -229,3 +229,22 @@ test('profit drilldown uses standard financial tree and list',async({page})=>{
  await expect(page.locator('#az-stats')).toContainText('Получено');
  expect(errors).toEqual([]);
 });
+
+test('original transaction status opens partial execution dialog without posting on cancel',async({page})=>{
+ await page.goto('http://127.0.0.1:8080/');
+ const work=await page.evaluate(()=>window.otStockJournal().find(t=>t.kind==='accrual'&&!t.done&&Number(t.qty)>0));
+ expect(work).toBeTruthy();
+ await page.locator('[data-orders-open="'+work.orderId+'"]').click();
+ await page.locator('[data-oc-route="finance"]').click();
+ await page.locator('#az-app [data-mode=list]').click();
+ await page.locator('#az-content .az-grow[data-edit="'+work.id+'"]').click();
+ await page.locator('#az-status-toggle').click();
+ await page.locator('#az-status-menu [data-status="confirmed"]').click();
+ const dialog=page.locator('dialog[open]');
+ await expect(dialog).toContainText('Подтверждение исполнения');
+ await expect(dialog).toContainText('Бригада');
+ await dialog.getByRole('button',{name:'Частично',exact:true}).click();
+ await expect(dialog.locator('input[type=number]').first()).toHaveValue('');
+ await dialog.getByRole('button',{name:'Закрыть',exact:true}).click();
+ expect(await page.evaluate(id=>window.otStockJournal().find(t=>t.id===id).done,work.id)).toBeFalsy();
+});
