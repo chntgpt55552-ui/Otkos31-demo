@@ -513,7 +513,7 @@ function otAccountEdit(records,journal,action,entry){
  if(action==='create'){
   if(i>=0||!entry.id)throw Error('Повтор ID счёта');
   if(entry.parentId!=null&&next.find(r=>r.id===entry.parentId)?.archived)throw Error('Родитель в архиве');
-  next.push({id:entry.id,name:entry.name,parentId:entry.parentId??null,archived:false});
+  next.push({id:entry.id,name:entry.name,parentId:entry.parentId??null,archived:false,scopeId:otFinanceScope(entry)});
  }else{
   if(i<0)throw Error('Счёт не найден');
   const old=next[i],used=journal.some(t=>t.account===old.id||t.destination===old.id),children=next.some(r=>r.parentId===old.id);
@@ -554,6 +554,23 @@ function otFinanceAccountTree(records,scope,balances={}){
 window.otFinanceScope=otFinanceScope;
 window.otFinancePartition=otFinancePartition;
 window.otFinanceAccountTree=otFinanceAccountTree;
+function otAccountStore(storage,journal){
+ const key='otkos31.accountTree.v1';
+ function read(){
+  const raw=storage.getItem(key),saved=raw===null?[]:JSON.parse(raw);
+  if(!Array.isArray(saved))throw Error('Поврежден справочник счетов');
+  const rows=otAccountMigration(saved,journal);
+  for(const scope of otFinanceScopes)otFinanceAccountTree(rows,scope);
+  return rows;
+ }
+ return {read,change(action,entry){
+  const rows=otAccountEdit(read(),journal,action,entry);
+  for(const scope of otFinanceScopes)otFinanceAccountTree(rows,scope);
+  storage.setItem(key,JSON.stringify(rows));return rows;
+ }};
+}
+window.otAccountStore=otAccountStore;
+
 
 
 
