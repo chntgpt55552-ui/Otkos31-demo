@@ -3,6 +3,7 @@
 function resolve({materials,report,bindings,ledger,location,width,height}){
  if(report.issues.length)throw Error('Исправьте ошибки складского журнала');
  if(!location||![width,height].every(n=>Number.isFinite(n)&&n>0))throw Error('Укажите склад и размер листа');
+ if(String(location).startsWith('prepared:'))throw Error('Готовые детали нельзя использовать как сырьё для раскроя');
  const costs={},stock={},remnants=[];const ids=new Set();
  for(const [type,id] of Object.entries(bindings)){
  if(ids.has(id))throw Error('Выберите разные материалы');ids.add(id);
