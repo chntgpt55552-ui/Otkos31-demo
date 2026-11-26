@@ -161,3 +161,22 @@ test('existing salary accrual prevents duplicate stage wage',()=>{
  assert.throws(()=>globalThis.OtBrigadeStage.prepare(args),/существующее плановое начисление/);
  } finally {globalThis.OtBrigadeWork=old;}
 });
+
+test('two brigades complete 60 metres in stages without duplicate wages',()=>{
+ require('../brigade-work.js');require('../brigade-stage.js');
+ const work={id:'w',orderId:'a',name:'Белые откосы',qty:60,unit:'п/м'};
+ const plan=globalThis.OtBrigadeWork.allocate({work,assignments:[{brigadeId:'b1',qty:30},{brigadeId:'b2',qty:30}],brigadeIds:['b1','b2']});
+ let journal=[],events=[];
+ for(const [id,brigadeId,qty] of [['e1','b1',30],['e2','b2',15],['e3','b2',15]]){
+ const event={id,workId:'w',brigadeId,qty,date:'2026-11-27'};
+ const args={journal,materials:[],plan,events,event,work,brigade:{id:brigadeId,name:brigadeId,members:[]},rate:300,usage:[]};
+ const result=globalThis.OtBrigadeStage.prepare(args);
+ assert.equal(result.entries[0].amount,qty*300);
+ journal.push(...result.entries);events.push(event);
+ assert.throws(()=>globalThis.OtBrigadeStage.prepare({...args,journal,events}));
+ }
+ assert.equal(journal.reduce((n,t)=>n+t.qty,0),60);
+ assert.equal(journal.reduce((n,t)=>n+t.amount,0),18000);
+ assert.equal(new Set(journal.map(t=>t.id)).size,3);
+ assert.throws(()=>globalThis.OtBrigadeWork.confirm({plan,events,event:{id:'e4',workId:'w',brigadeId:'b2',qty:1,date:'2026-11-27'}}));
+});
