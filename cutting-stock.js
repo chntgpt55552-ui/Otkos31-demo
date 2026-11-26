@@ -9,6 +9,8 @@ function resolve({materials,report,bindings,ledger,location,width,height}){
  const m=materials.find(x=>x.id===id),r=report.rows.find(x=>x.id===id);
  if(!m||!r)throw Error('Материал отсутствует на складе: '+type);
  const u=root.otMaterialCore.units(m).find(x=>['м²','м2'].includes(x.name));if(!u||!Number.isFinite(u.factor)||u.factor<=0)throw Error('Нет единицы площади');
+ const sheetArea=width*height/1e6;
+ if(Math.abs(u.factor-sheetArea)>1e-8)throw Error('Размер листа не соответствует площади складской единицы материала: '+type);
  const area=(r.locations[location]||0)*u.factor;
  const active=ledger.items.filter(x=>['available','reserved'].includes(x.status)&&(x.materialId===id||(!x.materialId&&x.material===type)));
  if(active.some(x=>!x.materialId||!x.location))throw Error('Уточните материал и склад старых остатков');
