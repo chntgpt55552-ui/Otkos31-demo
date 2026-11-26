@@ -2163,6 +2163,25 @@ function otValidateBackupRemnants(ledger) {
   cuts.add(c.id);
  }
 }
+function otValidateRemnantStock(ledger,stock,materials){
+ const totals=new Map();
+ for(const r of ledger.items){
+  if(!['available','reserved'].includes(r.status))continue;
+  const m=materials.find(x=>x.id===r.materialId);
+  if(!m||!r.location)throw Error('Не определён материал или склад остатка №'+r.number);
+  const u=window.otMaterialCore.units(m).find(x=>['м²','м2'].includes(x.name));
+  if(!u||!Number.isFinite(u.factor)||u.factor<=0)throw Error('Нет единицы площади остатка №'+r.number);
+  const cells=r.cells??[{w:r.width,h:r.height}];
+  if(!Array.isArray(cells)||!cells.length||!cells.every(c=>c&&[c.w,c.h].every(n=>Number.isFinite(n)&&n>0)))throw Error('Повреждена геометрия остатка №'+r.number);
+  const qty=cells.reduce((n,c)=>n+c.w*c.h,0)/1e6/u.factor;
+  const key=JSON.stringify([m.id,r.location]);
+  totals.set(key,(totals.get(key)||0)+qty);
+ }
+ for(const [key,qty] of totals){
+  const [id,loc]=JSON.parse(key),row=stock.rows.find(r=>r.id===id);
+  if(!row||!Number.isFinite(qty)||qty>(row.locations?.[loc]||0)+1e-9)throw Error('Полезные остатки превышают складской запас: '+id+' / '+loc);
+ }
+}
 function otPrepareBackup(payload) {
  if (payload?.format !== 'otkos31-backup' || ![1,2,3].includes(payload.version) || !valid(payload.database)) {
   throw Error('Это не резервная копия ОТКОС31 или структура данных повреждена');
@@ -2191,7 +2210,7 @@ function otPrepareBackup(payload) {
  const cashIssues = window.otValidateFinancialJournal(db.journal);
  if (cashIssues.length) throw Error('Некорректные денежные операции: ' + cashIssues.join(', '));
  const remnants=payload.version===3?payload.remnants:null;
- if(payload.version===3)otValidateBackupRemnants(remnants);
+ if(payload.version===3){otValidateBackupRemnants(remnants);otValidateRemnantStock(remnants,stock,materials);}
  if(payload.version!==3&&(db.journal.some(t=>t.cutMovement||t.preparedConsumption)||window.otStorage.getItem('otRemnantsV1')!==null))throw Error('Старая копия не содержит реестр раскроя. Требуется согласованное восстановление.');
  return {database:otNormalizeOrderParents(db), directories, treeUI, wageTariffs, remnants};
 }
