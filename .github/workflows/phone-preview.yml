@@ -1,0 +1,34 @@
+name: Phone preview
+on:
+  push:
+    branches: [feature/measurement-spec-3]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build standalone preview
+        run: |
+          mkdir -p preview
+          python3 - <<'PY'
+          import pathlib,re
+          root=pathlib.Path('.')
+          h=(root/'index.html').read_text()
+          def inline(m):
+              p=root/m.group(1)
+              return '<script>'+p.read_text().replace('</script','<\\/script')+'</script>'
+          h,n=re.subn(r'<script src="([^"]+)"></script>',inline,h)
+          assert n>=22,n
+          h=re.sub(r'<link rel="(?:manifest|icon)"[^>]*>','',h)
+          h=h.replace('const sw=navigator.serviceWorker','const sw=null')
+          h=h.replace('v127-preview31.0','TEST • isolated preview')
+          h=h.replace('window.localStorage.getItem(key)','window.localStorage.getItem("preview:"+key)').replace('window.localStorage.setItem(key, value)','window.localStorage.setItem("preview:"+key, value)').replace('window.localStorage.removeItem(key)','window.localStorage.removeItem("preview:"+key)')
+          (root/'preview'/'OTKOS31_TEST.html').write_text(h)
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: OTKOS31-phone-preview
+          path: preview/OTKOS31_TEST.html
