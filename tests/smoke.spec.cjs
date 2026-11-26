@@ -203,6 +203,9 @@ test('posted payment updates cash and debt exactly once',async({page})=>{
 
 test('release cache replaces obsolete app cache without touching unrelated caches',async({page})=>{
  await page.goto('http://127.0.0.1:8080/');
+ const source=await (await page.request.get('http://127.0.0.1:8080/sw.js')).text();
+ const cacheName=source.match(/const CACHE='([^']+)'/)?.[1];
+ expect(cacheName).toMatch(/^otkos31-demo-/);
  await page.evaluate(async()=>{
  await caches.open('otkos31-demo-obsolete-test');
  await caches.open('unrelated-test');
@@ -210,7 +213,7 @@ test('release cache replaces obsolete app cache without touching unrelated cache
  await reg.unregister();
  });
  await page.reload();
- await expect.poll(()=>page.evaluate(async()=>{const keys=await caches.keys();return keys.includes('otkos31-demo-v126-3-127-preview29.1')&&!keys.includes('otkos31-demo-obsolete-test')&&keys.includes('unrelated-test')})).toBe(true);
+ await expect.poll(()=>page.evaluate(async(name)=>{const keys=await caches.keys();return keys.includes(name)&&!keys.includes('otkos31-demo-obsolete-test')&&keys.includes('unrelated-test')},cacheName)).toBe(true);
 });
 
 test('profit drilldown uses standard financial tree and list',async({page})=>{
