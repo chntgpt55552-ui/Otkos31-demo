@@ -859,7 +859,7 @@ function commitDatabase(next, {allowBrigadeMigration = false, cuttingLedger = nu
  const pastAccountIssues = new Set(otAccountReport(database.journal,accountIds).issues);
  const accountIssues = otAccountReport(candidate.journal,accountIds).issues.filter(id => !pastAccountIssues.has(id));
  if (accountIssues.length) throw Error('Некорректные денежные операции: ' + accountIssues.join(', '));
- financialSummary(candidate.journal);
+ financialSummary(candidate.journal,candidate.orders);
  const json = JSON.stringify(candidate);
  const changes = [];
  if (readDatabase(previous)) changes.push([window.otStorage, BACKUP_KEY, previous]);
@@ -1267,7 +1267,16 @@ function otUnpaidOther(entries) {
   (t.liabilityConfirmed === true || t.confirmedDebt === true) && !txSettled(t))) / 100;
 }
 
-function financialSummary(arr) {
+function otCustomerBalances(groups,orders){
+ const parents=new Map(orders.map(o=>[String(o.id),o.parent==null?'':String(o.parent)]));
+ const root=id=>{const seen=new Set();while(parents.get(id)&&parents.has(parents.get(id))&&!seen.has(id)){seen.add(id);id=parents.get(id);}return id;};
+ const balances=new Map();
+ for(const [id,v] of groups){if(!id)continue;const k=root(id),b=balances.get(k)||{contract:0,earned:0,paid:0};for(const field of ['contract','earned','paid'])b[field]+=v[field];balances.set(k,b);}
+ let receivable=0,customerAdvances=0;
+ for(const b of balances.values()){receivable+=Math.max(0,b.contract-b.paid);customerAdvances+=Math.max(0,b.paid-b.earned);}
+ return {receivable,customerAdvances};
+}
+function financialSummary(arr, orders=database.orders) {
  const totalKind = (kind, settled = false) =>
   otTotalCents(arr.filter(t => t.kind === kind && (!settled || txSettled(t)))) / 100;
  const cash = cashTotalsFor(arr);
@@ -1279,7 +1288,8 @@ function financialSummary(arr) {
   if (!groups.has(key)) groups.set(key, []);
   groups.get(key).push(t);
  }
- let receivable = 0, customerAdvances = 0, currentProfit = 0, finalMargin = 0;
+ const customerGroups=new Map();
+ let currentProfit = 0, finalMargin = 0;
  let currentKnown = true, forecastKnown = true, accrued = 0, performed = 0;
  const unresolvedStockCosts = [];
  for (const [order, entries] of groups) {
@@ -1294,9 +1304,9 @@ function financialSummary(arr) {
   const paid = otTotalCents(entries.filter(t => t.kind === 'payment' && txSettled(t)));
   accrued += contract;
   performed += otScaled(2, result.earned);
-  receivable += Math.max(0, contract - paid);
-  customerAdvances += Math.max(0, paid - otScaled(2, result.earned));
+  customerGroups.set(order,{contract,paid,earned:otScaled(2,result.earned)});
  }
+ const {receivable,customerAdvances}=otCustomerBalances(customerGroups,orders);
  const obligations = otScaled(2, salaryOwed) + otScaled(2, unpaidOther);
  return {accrued:accrued / 100, performed:performed / 100, received:cash.customerIncome,
   supplierRefunds:cash.supplierRefunds, expensesPaid:cash.expenses, warehousePurchasesPaid:cash.purchases,
