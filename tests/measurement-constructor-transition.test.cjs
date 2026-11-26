@@ -83,3 +83,19 @@ test('pending whole sheets exclude posted purchases, other materials and locatio
  assert.throws(()=>pendingSheets({...args,journal:[row(-1)]}));
  assert.throws(()=>pendingSheets({...args,journal:[row(NaN)]}));
 });
+
+
+test('7200 mm requires manual segmentation and preserves total length and area',()=>{
+ for(const mode of ['simple','advanced']) assert.throws(()=>model.specification(make(7200,mode),geometry.expand),/конструктор/);
+ const w=make(7200,'advanced');
+ w.parts[2].pieces=[{length:3000,depth:250},{length:3000,depth:250},{length:1200,depth:250}];
+ let i=0;
+ const parts=contour.contour(model.constructorNodes(w,()=>String(++i)));
+ const spec=model.specification({...w,mode:'custom',parts},geometry.expand);
+ assert.deepEqual(spec.map(p=>p.length),[3000,3000,1200,1400,1400]);
+ assert.equal(spec.reduce((n,p)=>n+p.length,0),10000);
+ assert.equal(spec.reduce((n,p)=>n+p.length*p.depth,0),2500000);
+ const result=require('../cutting-engine.js').pack(spec,{width:3000,height:1500});
+ assert.equal(result.unplaced.length,0);
+ assert.equal(result.sheets.flatMap(s=>s.parts).reduce((n,p)=>n+p.length*p.depth,0),2500000);
+});
