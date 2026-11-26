@@ -499,6 +499,16 @@ function otAccountTree(records, balances = {}) {
  roots.forEach(sum);return roots;
 }
 window.otAccountTree=otAccountTree;
+function otAccountMigration(records,journal){
+ const result=records.map(r=>({...r})),ids=new Set(result.map(r=>r.id));
+ for(const id of [...otLedgerAccounts,...journal.flatMap(t=>[t.account,t.destination])]){
+  if(typeof id!=='string'||!id.trim()||ids.has(id))continue;
+  result.push({id,name:id,parentId:null,archived:false});ids.add(id);
+ }
+ otAccountTree(result);return result;
+}
+window.otAccountMigration=otAccountMigration;
+
 const otCashKinds = new Set(['toolPurchase','payment', 'salaryPay', 'purchase', 'expense', 'transfer',
  'openingBalance', 'balanceAdjustment', 'supplierRefund', 'purchasePaymentReversal']);
 const otWarehouseKinds = new Set(['purchase', 'stockOut', 'stockMove', 'stockReturn',
