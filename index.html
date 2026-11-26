@@ -2145,6 +2145,24 @@ function otValidateDirectoryData(d) {
  }
 }
 
+function otValidateBackupRemnants(ledger) {
+ if(!otRecord(ledger)||!Array.isArray(ledger.items))throw Error('Повреждён реестр раскроя');
+ const keys=new Set(),numbers=new Set(),cuts=new Set();
+ for(const r of ledger.items){
+  if(!otRecord(r)||!otText(r.key)||keys.has(r.key)||!Number.isInteger(r.number)||r.number<1)throw Error('Некорректный или повторный остаток');
+  keys.add(r.key);
+  if(['available','reserved'].includes(r.status)){
+   if(numbers.has(r.number))throw Error('Повторный номер активного остатка');
+   numbers.add(r.number);
+   if(![r.width,r.height].every(n=>Number.isFinite(n)&&n>0))throw Error('Некорректные размеры остатка');
+  }
+ }
+ if(ledger.cuts!=null&&!Array.isArray(ledger.cuts))throw Error('Повреждены карты раскроя');
+ for(const c of ledger.cuts||[]){
+  if(!otRecord(c)||!otText(c.id)||cuts.has(c.id)||c.orderId==null||!Array.isArray(c.result?.sheets))throw Error('Некорректная или повторная карта раскроя');
+  cuts.add(c.id);
+ }
+}
 function otPrepareBackup(payload) {
  if (payload?.format !== 'otkos31-backup' || ![1,2,3].includes(payload.version) || !valid(payload.database)) {
   throw Error('Это не резервная копия ОТКОС31 или структура данных повреждена');
@@ -2173,7 +2191,7 @@ function otPrepareBackup(payload) {
  const cashIssues = window.otValidateFinancialJournal(db.journal);
  if (cashIssues.length) throw Error('Некорректные денежные операции: ' + cashIssues.join(', '));
  const remnants=payload.version===3?payload.remnants:null;
- if(payload.version===3&&(!otRecord(remnants)||!Array.isArray(remnants.items)||!remnants.items.every(otRecord)||(remnants.cuts!=null&&(!Array.isArray(remnants.cuts)||!remnants.cuts.every(otRecord)))))throw Error('Повреждён реестр раскроя');
+ if(payload.version===3)otValidateBackupRemnants(remnants);
  if(payload.version!==3&&(db.journal.some(t=>t.cutMovement||t.preparedConsumption)||window.otStorage.getItem('otRemnantsV1')!==null))throw Error('Старая копия не содержит реестр раскроя. Требуется согласованное восстановление.');
  return {database:otNormalizeOrderParents(db), directories, treeUI, wageTariffs, remnants};
 }
@@ -2229,7 +2247,7 @@ $('ot-export').addEventListener('click',()=>{
  }
  const rawRemnants=window.otStorage.getItem('otRemnantsV1');
  const remnants=rawRemnants===null?{items:[]}:parse(rawRemnants);
- if(!otRecord(remnants)||!Array.isArray(remnants.items)){message.textContent='Ошибка: повреждён реестр раскроя.';return;}
+ try{otValidateBackupRemnants(remnants)}catch(e){message.textContent=e.message;return;}
  const payload={format:'otkos31-backup',version:3,remnants,wageTariffs:parse(window.otStorage.getItem(tariffKey))||[],exportedAt:new Date().toISOString(),database:db,directories:parse(window.otStorage.getItem(dirKey))||{},treeUI:parse(sessionStorage.getItem(uiKey))||{}};
  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='OTKOS31_backup_'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),10000);message.textContent='Копия подготовлена. Сохраните файл в надёжном месте.';
 });
