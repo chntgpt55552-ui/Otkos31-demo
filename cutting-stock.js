@@ -26,5 +26,16 @@ function shortage({required,available,incoming=0}){
  const missing=Math.max(0,required-available);
  return {missing,toPurchase:Math.max(0,missing-incoming)};
 }
-root.OtCutStock={resolve,shortage};
+function allocate({available,incoming=0,demands}){
+ if(![available,incoming].every(n=>Number.isSafeInteger(n)&&n>=0)||!Array.isArray(demands))throw Error('Некорректный запас');
+ const seen=new Set();
+ return demands.map(d=>{
+ if(d.orderId==null||seen.has(String(d.orderId))||!Number.isSafeInteger(d.required)||d.required<0)throw Error('Некорректная потребность заказа');
+ seen.add(String(d.orderId));
+ const onHand=Math.min(available,d.required);available-=onHand;
+ const expected=Math.min(incoming,d.required-onHand);incoming-=expected;
+ return {...d,onHand,expected,toPurchase:d.required-onHand-expected};
+ });
+}
+root.OtCutStock={resolve,shortage,allocate};
 })(globalThis);
