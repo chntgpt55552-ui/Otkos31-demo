@@ -70,3 +70,16 @@ test('allocation never assigns the same sheet twice',()=>{
  assert.throws(()=>allocate({available:5,demands:[{orderId:'a',required:1},{orderId:'a',required:2}]}));
  assert.deepEqual(allocate({available:0,demands:[]}),[]);
 });
+
+
+test('pending whole sheets exclude posted purchases, other materials and locations',()=>{
+ require('../cutting-stock.js');
+ const pendingSheets=globalThis.OtCutStock.pendingSheets;
+ const material={id:'white'};
+ const row=(q,extra={})=>({kind:'purchase',done:false,materialId:'white',location:'main',q,...extra});
+ const journal=[row(2),row(0.5),row(0.5),row(9,{done:true}),row(8,{materialId:'other'}),row(7,{location:'car'}),row(6,{kind:'return'})];
+ const args={journal,material,location:'main',baseQuantity:t=>t.q};
+ assert.equal(pendingSheets(args),2);
+ assert.throws(()=>pendingSheets({...args,journal:[row(-1)]}));
+ assert.throws(()=>pendingSheets({...args,journal:[row(NaN)]}));
+});
