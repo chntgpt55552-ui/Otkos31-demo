@@ -21,3 +21,20 @@ test('complex geometry cannot silently become rectangle',()=>{
  const w=make(4200,'advanced');w.parts[2].geometry='arch';
  assert.throws(()=>model.constructorNodes(w,()=> 'id'),/сложного контура/);
 });
+
+test('manual segments replace parent in specification without double counting',()=>{
+ const w=make(4200,'advanced');
+ w.parts[2].pieces=[{length:2200,depth:250},{length:2000,depth:300}];
+ let i=0;const parts=contour.contour(model.constructorNodes(w,()=>String(++i)));
+ const spec=model.specification({...w,count:2,mode:'custom',parts},geometry.expand);
+ assert.equal(spec.length,4);
+ assert.equal(spec.reduce((n,p)=>n+p.linear,0),14);
+ assert.ok(Math.abs(spec.reduce((n,p)=>n+p.area,0)-3.7)<1e-9);
+ assert.ok(spec.every(p=>p.length<=3000));
+});
+test('invalid manual segmentation cannot reach specification',()=>{
+ for(const pieces of [[{length:3100},{length:1100}],[{length:2000},{length:2000}]]){
+ const w=make(4200,'custom');w.parts[2].pieces=pieces;
+ assert.throws(()=>model.specification(w,geometry.expand));
+ }
+});
