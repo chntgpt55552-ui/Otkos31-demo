@@ -37,5 +37,12 @@ function allocate({available,incoming=0,demands}){
  return {...d,onHand,expected,toPurchase:d.required-onHand-expected};
  });
 }
-root.OtCutStock={resolve,shortage,allocate};
+function pendingSheets({journal,material,location,baseQuantity}){
+ return journal.filter(t=>t.kind==='purchase'&&!t.done&&t.materialId===material.id&&t.location===location).reduce((n,t)=>{
+ const q=baseQuantity(t,material);
+ if(!Number.isFinite(q)||q<=0)throw Error('Некорректная ожидаемая закупка');
+ return n+(Math.abs(q-Math.round(q))<1e-8?Math.round(q):0);
+ },0);
+}
+root.OtCutStock={resolve,shortage,allocate,pendingSheets};
 })(globalThis);
