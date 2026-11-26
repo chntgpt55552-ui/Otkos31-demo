@@ -1,4 +1,4 @@
-const CACHE='otkos31-demo-v126-3-127-preview29.1';
+const CACHE='otkos31-demo-v127-preview29.6';
 const ROOT=new URL('./',self.registration.scope).href;
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll([ROOT,new URL('icon.svg',ROOT).href,new URL('manifest.webmanifest',ROOT).href].map(u=>new Request(u,{cache:"reload"}))).then(()=>self.skipWaiting()))));
 self.addEventListener('message',e=>{if(e.data==='ACTIVATE_UPDATE')e.waitUntil(self.skipWaiting());});
