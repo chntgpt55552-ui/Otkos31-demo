@@ -51,3 +51,13 @@ test('cutting receives only final pieces with correct multiplicity',()=>{
  assert.ok(placed.every(p=>p.length<=3000));
  assert.equal(placed.reduce((n,p)=>n+p.length*p.depth,0),3700000);
 });
+
+test('whole sheet shortage distinguishes physical stock from incoming purchases',()=>{
+ require('../cutting-stock.js');
+ const shortage=globalThis.OtCutStock.shortage;
+ assert.deepEqual(shortage({required:10,available:4,incoming:2}),{missing:6,toPurchase:4});
+ assert.deepEqual(shortage({required:10,available:4,incoming:8}),{missing:6,toPurchase:0});
+ assert.deepEqual(shortage({required:3,available:4}),{missing:0,toPurchase:0});
+ assert.throws(()=>shortage({required:3,available:1.5}));
+ assert.throws(()=>shortage({required:3,available:1,incoming:-1}));
+});
