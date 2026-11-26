@@ -61,3 +61,12 @@ test('whole sheet shortage distinguishes physical stock from incoming purchases'
  assert.throws(()=>shortage({required:3,available:1.5}));
  assert.throws(()=>shortage({required:3,available:1,incoming:-1}));
 });
+
+test('allocation never assigns the same sheet twice',()=>{
+ require('../cutting-stock.js');
+ const allocate=globalThis.OtCutStock.allocate;
+ const rows=allocate({available:5,incoming:3,demands:[{orderId:'a',required:4},{orderId:'b',required:3},{orderId:'c',required:5}]});
+ assert.deepEqual(rows.map(r=>[r.onHand,r.expected,r.toPurchase]),[[4,0,0],[1,2,0],[0,1,4]]);
+ assert.throws(()=>allocate({available:5,demands:[{orderId:'a',required:1},{orderId:'a',required:2}]}));
+ assert.deepEqual(allocate({available:0,demands:[]}),[]);
+});
