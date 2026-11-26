@@ -21,5 +21,10 @@ function resolve({materials,report,bindings,ledger,location,width,height}){
  }
  return {costs,stock,remnants};
 }
-root.OtCutStock={resolve};
+function shortage({required,available,incoming=0}){
+ if(![required,available,incoming].every(n=>Number.isSafeInteger(n)&&n>=0))throw Error('Некорректное количество целых листов');
+ const missing=Math.max(0,required-available);
+ return {missing,toPurchase:Math.max(0,missing-incoming)};
+}
+root.OtCutStock={resolve,shortage};
 })(globalThis);
