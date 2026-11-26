@@ -480,6 +480,25 @@ const otNavigation = (() => {
  };
 })();
 const otLedgerAccounts = Object.freeze(['Наличные', 'Р/с с НДС', 'Р/с без НДС']);
+// Account tree model; legacy account keys remain stable during migration.
+function otAccountTree(records, balances = {}) {
+ const map=new Map(), names=new Set();
+ for(const r of records){
+  if(!r.id||typeof r.name!=='string'||!r.name.trim()||map.has(r.id))throw Error('Некорректный счёт');
+  const key=JSON.stringify([r.parentId??null,r.name.trim().toLocaleLowerCase('ru-RU')]);
+  if(names.has(key))throw Error('Повтор названия в ветке');
+  names.add(key);map.set(r.id,{...r,children:[],own:balances[r.id]??0});
+ }
+ const roots=[];
+ for(const r of map.values()){
+  const seen=new Set([r.id]);let p=r.parentId;
+  while(p!=null){if(seen.has(p)||!map.has(p))throw Error('Некорректная вложенность счетов');seen.add(p);p=map.get(p).parentId;}
+  if(r.parentId==null)roots.push(r);else map.get(r.parentId).children.push(r);
+ }
+ function sum(r){if(!Number.isFinite(r.own))throw Error('Некорректный остаток');r.total=(otScaled(2,r.own)+r.children.reduce((n,c)=>n+sum(c),0))/100;return otScaled(2,r.total);}
+ roots.forEach(sum);return roots;
+}
+window.otAccountTree=otAccountTree;
 const otCashKinds = new Set(['toolPurchase','payment', 'salaryPay', 'purchase', 'expense', 'transfer',
  'openingBalance', 'balanceAdjustment', 'supplierRefund', 'purchasePaymentReversal']);
 const otWarehouseKinds = new Set(['purchase', 'stockOut', 'stockMove', 'stockReturn',
