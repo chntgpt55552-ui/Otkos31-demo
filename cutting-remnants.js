@@ -21,7 +21,7 @@ function writeOff(ledger,key,{reason='Некондиция',rect=null,eventId}={
  area=w*h;const pieces=[[0,0,p.width,y],[0,y+h,p.width,p.height-y-h],[0,y,x,h],[x+w,y,p.width-x-w,h]].filter(a=>a[2]>0&&a[3]>0);
  p.status='split';for(const [i,[x,y,width,height]] of pieces.entries()){let number=1;while(items.some(a=>!['used','writtenOff','split'].includes(a.status)&&a.number===number))number++;const child={...p,key:JSON.stringify([key,eventId,i]),parentKey:key,number,width,height,x,y,status:'available'};items.push(child);children.push(child.key)}
  }else p.status='writtenOff';
- return {...ledger,items,events:[...(ledger.events||[]),{id:eventId,key,number:p.number,reason,rect,area,children}]};
+ return {...ledger,items,events:[...(ledger.events||[]),{id:eventId,key,number:p.number,reason,rect,area,children,date:new Date().toISOString(),material:p.material,location:p.location||null,kind:rect?'partial':'full',width:p.width,height:p.height}]};
 }
 const api={classify,register,writeOff};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.OtCuttingRemnants=api;
 })(globalThis);
