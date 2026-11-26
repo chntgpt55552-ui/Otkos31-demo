@@ -38,3 +38,16 @@ test('invalid manual segmentation cannot reach specification',()=>{
  assert.throws(()=>model.specification(w,geometry.expand));
  }
 });
+
+test('cutting receives only final pieces with correct multiplicity',()=>{
+ const w=make(4200,'advanced');
+ w.parts[2].pieces=[{length:2200,depth:250},{length:2000,depth:300}];
+ let i=0;const parts=contour.contour(model.constructorNodes(w,()=>String(++i)));
+ const spec=model.specification({...w,count:2,mode:'custom',parts},geometry.expand);
+ const result=require('../cutting-engine.js').pack(spec,{width:3000,height:1500});
+ assert.equal(result.unplaced.length,0);
+ const placed=result.sheets.flatMap(s=>s.parts);
+ assert.equal(placed.length,8);
+ assert.ok(placed.every(p=>p.length<=3000));
+ assert.equal(placed.reduce((n,p)=>n+p.length*p.depth,0),3700000);
+});
