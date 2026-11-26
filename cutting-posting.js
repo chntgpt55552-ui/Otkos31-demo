@@ -17,7 +17,7 @@ function commit(args,{stock,limits={},bindings={},location=null}={}){
  movements.push(...v.movements.map((m,j)=>({...m,material:s.material,id:JSON.stringify([args.cutId,i,j])})));return {...s,free};
  });
  ledger.confirmed=[...(ledger.confirmed||[]),args.cutId];const remainingStock={...stock};for(const [m,t] of Object.entries(check.totals))remainingStock[m]-=t.newSheets;
- return {ledger,stock:remainingStock,movements,result:{...classified,sheets}};
+ const result={...classified,sheets};ledger.cuts=[...(ledger.cuts||[]),{id:args.cutId,orderId:args.orderId,date:new Date().toISOString(),location,bindings:{...bindings},costs:{...args.costs},result:JSON.parse(JSON.stringify(result)),movements:JSON.parse(JSON.stringify(movements))}];return {ledger,stock:remainingStock,movements,result};
 }
 root.OtCutPosting={commit};
 })(globalThis);
