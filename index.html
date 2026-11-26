@@ -2146,7 +2146,7 @@ function otValidateDirectoryData(d) {
 }
 
 function otPrepareBackup(payload) {
- if (payload?.format !== 'otkos31-backup' || ![1,2].includes(payload.version) || !valid(payload.database)) {
+ if (payload?.format !== 'otkos31-backup' || ![1,2,3].includes(payload.version) || !valid(payload.database)) {
   throw Error('Это не резервная копия ОТКОС31 или структура данных повреждена');
  }
  const directories = payload.directories ?? {}, treeUI = payload.treeUI ?? {};
@@ -2172,13 +2172,17 @@ function otPrepareBackup(payload) {
  if (issues.length) throw Error(issues.slice(0,5).join('; '));
  const cashIssues = window.otValidateFinancialJournal(db.journal);
  if (cashIssues.length) throw Error('Некорректные денежные операции: ' + cashIssues.join(', '));
- return {database:otNormalizeOrderParents(db), directories, treeUI, wageTariffs};
+ const remnants=payload.version===3?payload.remnants:null;
+ if(payload.version===3&&(!otRecord(remnants)||!Array.isArray(remnants.items)||!remnants.items.every(otRecord)||(remnants.cuts!=null&&(!Array.isArray(remnants.cuts)||!remnants.cuts.every(otRecord)))))throw Error('Повреждён реестр раскроя');
+ if(payload.version!==3&&(db.journal.some(t=>t.cutMovement||t.preparedConsumption)||window.otStorage.getItem('otRemnantsV1')!==null))throw Error('Старая копия не содержит реестр раскроя. Требуется согласованное восстановление.');
+ return {database:otNormalizeOrderParents(db), directories, treeUI, wageTariffs, remnants};
 }
 
 function otRestoreBackup(payload) {
  const changes = [
   [window.otStorage, dirKey, JSON.stringify(payload.directories)],
   [window.otStorage, tariffKey, JSON.stringify(payload.wageTariffs)],
+  ...(payload.remnants===null?[]:[[window.otStorage,'otRemnantsV1',JSON.stringify(payload.remnants)]]),
   [sessionStorage, uiKey, JSON.stringify(payload.treeUI)],
   [window.otStorage, key, JSON.stringify(payload.database)],
  ];
@@ -2223,7 +2227,10 @@ $('ot-export').addEventListener('click',()=>{
   message.textContent = 'Ошибка: нет корректной сохранённой базы. Не экспортируем тестовые или повреждённые данные.';
   return;
  }
- const payload={format:'otkos31-backup',version:2,wageTariffs:parse(window.otStorage.getItem(tariffKey))||[],exportedAt:new Date().toISOString(),database:db,directories:parse(window.otStorage.getItem(dirKey))||{},treeUI:parse(sessionStorage.getItem(uiKey))||{}};
+ const rawRemnants=window.otStorage.getItem('otRemnantsV1');
+ const remnants=rawRemnants===null?{items:[]}:parse(rawRemnants);
+ if(!otRecord(remnants)||!Array.isArray(remnants.items)){message.textContent='Ошибка: повреждён реестр раскроя.';return;}
+ const payload={format:'otkos31-backup',version:3,remnants,wageTariffs:parse(window.otStorage.getItem(tariffKey))||[],exportedAt:new Date().toISOString(),database:db,directories:parse(window.otStorage.getItem(dirKey))||{},treeUI:parse(sessionStorage.getItem(uiKey))||{}};
  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='OTKOS31_backup_'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),10000);message.textContent='Копия подготовлена. Сохраните файл в надёжном месте.';
 });
 $('ot-import').addEventListener('click',()=>$('ot-import-file').click());
