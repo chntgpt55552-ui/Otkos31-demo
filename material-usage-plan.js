@@ -19,5 +19,11 @@ function propose({work,completed,quantity,specification,actual}){
  }
  return [...rows.entries()].map(([k,r])=>({...r,qty:Math.max(0,r.qty*Math.min(1,(completed+quantity)/work.qty)-(consumed.get(k)||0))})).filter(r=>r.qty>1e-9);
 }
-root.OtMaterialUsagePlan={propose};
+function link({position,work,material,unit,prepared=false}){
+ if(!position||position.kind!=='stockOut'||position.done||position.origin!=='Спецификация'||!work||work.kind!=='accrual'||work.done||work.id==null||work.orderId==null||String(position.orderId)!==String(work.orderId))throw Error('Связь допустима только для плановой спецификации того же заказа');
+ if(position.workId!=null&&String(position.workId)!==String(work.id))throw Error('Позиция уже связана с другой работой');
+ if(!material?.id||!unit||position.materialId!==material.id||position.unit!==unit||!Number.isFinite(position.qty)||position.qty<=0)throw Error('Проверьте материал и единицу');
+ return {...position,workId:work.id,prepared:prepared===true};
+}
+root.OtMaterialUsagePlan={propose,link};
 })(globalThis);
