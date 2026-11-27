@@ -421,6 +421,8 @@ test('group purchase form saves once and persists across reload',async({page})=>
  const order=db.orders.find(o=>!o.archived);
  const t={id:'group-test-demand',kind:'stockOut',orderId:order.id,group:'Материалы',article:'Основные материалы',name:m.name,qty:100000,unit:m.unit,price:0,amount:0,done:false,paid:false,origin:'Спецификация',date:new Date().toLocaleDateString('sv-SE'),location:'Основной склад'};
  Object.assign(t,window.otMaterialCore.bind(t,m.id,null));
+ // Use a clean, isolated procurement fixture; legacy unbound rows are tested separately.
+ db.journal=db.journal.filter(x=>!['stockOut','purchase','stockMove','stockReturn'].includes(x.kind));
  db.journal.push(t);
  window.otStorage.setItem(key,JSON.stringify(db));
  return m.id;
