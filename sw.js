@@ -1,4 +1,4 @@
-const CACHE='otkos31-demo-v127-preview31.5-6e749ab14bda2c8d';
+const CACHE='otkos31-demo-v127-preview31.5-b244bbca66e7fd06';
 const ASSETS=[
  [
   "./",
@@ -70,7 +70,7 @@ const ASSETS=[
  ],
  [
   "brigade-stage.js",
-  "sha256-3lRnFl7Qj5Fnebk23w8Yiahx6lm8Lu7E2xv596P8cFA="
+  "sha256-FqT8iyvPbx380ByGeyA7oTQjpRcuC3uR7BuiOrQMqZ0="
  ],
  [
   "brigade-card.js",
