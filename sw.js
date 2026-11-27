@@ -1,11 +1,115 @@
-// Bump cache name on each release.
-const CACHE='otkos31-demo-v127-preview31.1';
+const CACHE='otkos31-demo-v127-preview31.2-a282088e2731ef0d';
+const ASSETS=[
+ [
+  "./",
+  "sha256-yTXl+Gu62+2Z/2gcgTdub9I8asDZWThHz5gh5wFIfEI="
+ ],
+ [
+  "icon.svg",
+  "sha256-j9P9cz5+QsK8B2W6QKXfTJUyBKNpsPc0yQLD93iaujg="
+ ],
+ [
+  "manifest.webmanifest",
+  "sha256-P6RVBLsdsElO2MIH4FgIanFpArzP+sgdrNArG5q7G6Y="
+ ],
+ [
+  "assistant-rules.js",
+  "sha256-9GJmX2qVZMx4LIMdMmtHSeg9ZUPSBZmX+UoSqWMHHJw="
+ ],
+ [
+  "lamination-plan.js",
+  "sha256-hMHTf30JYgS3EyV6Z0Cr9h80dTMfSQBk5dBRZjjlke0="
+ ],
+ [
+  "measure-geometry.js",
+  "sha256-MN6aFGzGiEhCfdAOxyJTLQOLHzkatYGk2hHySZAZNoI="
+ ],
+ [
+  "measure-model.js",
+  "sha256-gjTGZ4jxSXJVKQgxlA0VBf3jNsDEG+aqdc5LhIp/hqU="
+ ],
+ [
+  "cutting-material-cost.js",
+  "sha256-eaARtrtD7XCtWmsXo5m4pUaTjZBGgp4/dN9znF/Uwsc="
+ ],
+ [
+  "cutting-confirmation.js",
+  "sha256-/Tu6G746XaL+LqIdVEipg6O9P7dFUlxAM1b5kaWAE7U="
+ ],
+ [
+  "cutting-posting.js",
+  "sha256-KnjavhaHDZ6eQzo5MXK3EMe9+8ykOk/CQIh9TCcnxdA="
+ ],
+ [
+  "prepared-stock.js",
+  "sha256-2jjrGFABIDXTkOM4QmzQZoPIcPsqRJnMpyuTeafW4sE="
+ ],
+ [
+  "cutting-journal.js",
+  "sha256-dH2aOgHcN5DwM7zJOjtFPHzU+ikkqRhX/tx135zDXls="
+ ],
+ [
+  "object-stock.js",
+  "sha256-4jHWsE9fJmfWkOKjufiNaJe1kWFgCzYgg6/EJh734BM="
+ ],
+ [
+  "brigade-directory.js",
+  "sha256-SFtsf5m6tf412h1ByeTy5k9L4Hc00m7Be8hpkZhR7eg="
+ ],
+ [
+  "brigade-work.js",
+  "sha256-2TCzieeIbhIBVZ9hc6hSy3ivcztD6xYjH0bR+Y3k57M="
+ ],
+ [
+  "brigade-stage.js",
+  "sha256-3lRnFl7Qj5Fnebk23w8Yiahx6lm8Lu7E2xv596P8cFA="
+ ],
+ [
+  "brigade-card.js",
+  "sha256-lBpX/vZHLjT/pxay03+KaDLM5H8RfPV4G5JLgQNEmYs="
+ ],
+ [
+  "cutting-stock.js",
+  "sha256-u7j03BWHxBM+uVfpp9sM1H5Xm+uiQ/MOXgRb7/Qodl0="
+ ],
+ [
+  "cutting-engine.js",
+  "sha256-TO+tTKh6xvn0jmAYCcvuiedxMjQgIXGUN9Rf/lnPqmw="
+ ],
+ [
+  "cutting-map.js",
+  "sha256-R1Bt2do8Dz7FklDMiHzIrxNUd5zyHMd7PJrOFZQkIeA="
+ ],
+ [
+  "cutting-remnant-shape.js",
+  "sha256-suifJ82XacPSZJGM6hmwnMqybWfFxKDp6uh8e4BUVMk="
+ ],
+ [
+  "cutting-remnants.js",
+  "sha256-SCFtjNC9d85ryj+SwHeIaMfFSwqiHMb2nDJClETlGS0="
+ ],
+ [
+  "measure-custom-contour.js",
+  "sha256-MWrHPIqQ0xXYSJ9KkCLRuZz1u7wZlWlkkroPnt0WKOY="
+ ],
+ [
+  "measure-contour-editor.js",
+  "sha256-i+5cgcM/j1sYHkNGOChA83xKW10J2mX5H/Q6RqTFyfU="
+ ],
+ [
+  "measure-segment-editor.js",
+  "sha256-gwlibwgacutemIKf/aLjMxSkjlvkdAsK1pod29smXGY="
+ ],
+ [
+  "pwa-update.js",
+  "sha256-efWRWRRRuuaFc/sMALBU7ARKllanxiStYPQwc6UqprE="
+ ]
+];
 const ROOT=new URL('./',self.registration.scope).href;
-const ASSETS=["./","icon.svg","manifest.webmanifest","assistant-rules.js","lamination-plan.js","measure-geometry.js","measure-model.js","cutting-material-cost.js","cutting-confirmation.js","cutting-posting.js","prepared-stock.js","cutting-journal.js","object-stock.js","brigade-directory.js","brigade-work.js","brigade-stage.js","brigade-card.js","cutting-stock.js","cutting-engine.js","cutting-map.js","cutting-remnant-shape.js","cutting-remnants.js","measure-custom-contour.js","measure-contour-editor.js","measure-segment-editor.js"];
-const URLS=new Set(ASSETS.map(p=>new URL(p,ROOT).href));
+const URLS=new Set(ASSETS.map(([p])=>new URL(p,ROOT).href));
 self.addEventListener('install',e=>e.waitUntil((async()=>{
  const cache=await caches.open(CACHE);
- await cache.addAll([...URLS].map(u=>new Request(u,{cache:'reload'})));
+ await cache.addAll(ASSETS.map(([p,integrity])=>new Request(new URL(p,ROOT),{cache:'reload',integrity})));
 })()));
 self.addEventListener('message',e=>{if(e.data==='ACTIVATE_UPDATE')e.waitUntil(self.skipWaiting());});
 self.addEventListener('activate',e=>e.waitUntil((async()=>{

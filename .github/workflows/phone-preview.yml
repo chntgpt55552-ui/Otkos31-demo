@@ -29,7 +29,7 @@ jobs:
           assert n>=22,n
           h=re.sub(r'<link rel="(?:manifest|icon)"[^>]*>','',h)
           h=h.replace('const sw=navigator.serviceWorker','const sw=null')
-          h=h.replace('v127-preview31.0','TEST • isolated preview')
+          h=h.replace('<html lang=', '<html data-phone-preview lang=')
           h=h.replace('window.localStorage.getItem(key)','window.localStorage.getItem("preview:"+key)').replace('window.localStorage.setItem(key, value)','window.localStorage.setItem("preview:"+key, value)').replace('window.localStorage.removeItem(key)','window.localStorage.removeItem("preview:"+key)')
           assert not re.search(r'<script[^>]+src=',h)
           assert 'const sw=null' in h
