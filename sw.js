@@ -1,8 +1,16 @@
-const CACHE='otkos31-demo-v127-preview31.2-a282088e2731ef0d';
+const CACHE='otkos31-demo-v127-preview31.3-6b356f63aedaf732';
 const ASSETS=[
  [
   "./",
-  "sha256-yTXl+Gu62+2Z/2gcgTdub9I8asDZWThHz5gh5wFIfEI="
+  "sha256-D74dTW397fN+z0Z1Z8w2pJpvvzLY0/ZFEYW0Dan2siE="
+ ],
+ [
+  "icon-512.png",
+  "sha256-Ffd7kNOlSYiJCzGClYIIbSbT/IMnRqfp3ZpIll3hSw4="
+ ],
+ [
+  "icon-192.png",
+  "sha256-n0LGj5Y6iL47HDostYuT9Q9GzLRQPK8RX7rZpa167wc="
  ],
  [
   "icon.svg",
@@ -10,7 +18,7 @@ const ASSETS=[
  ],
  [
   "manifest.webmanifest",
-  "sha256-P6RVBLsdsElO2MIH4FgIanFpArzP+sgdrNArG5q7G6Y="
+  "sha256-v9M/N1PuKcQTvjqsOy4cwD4IDfWxUhpRKBtsey3a8R0="
  ],
  [
   "assistant-rules.js",

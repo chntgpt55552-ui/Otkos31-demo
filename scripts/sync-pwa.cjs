@@ -3,7 +3,8 @@ const fs = require('node:fs');
 const {createHash} = require('node:crypto');
 const html = fs.readFileSync('index.html','utf8');
 const version = html.match(/window\.otVersion = '([\w.-]+)'/)[1];
-const paths = ['./','icon.svg','manifest.webmanifest',...Array.from(html.matchAll(/<script src="([^"]+)"><\/script>/g), m => m[1])];
+const icons = JSON.parse(fs.readFileSync('manifest.webmanifest','utf8')).icons;
+const paths = ['./',...icons.map(icon => icon.src),'manifest.webmanifest',...Array.from(html.matchAll(/<script src="([^"]+)"><\/script>/g), m => m[1])];
 const assets = paths.map(path => {
  const data = fs.readFileSync(path === './' ? 'index.html' : path);
  return [path,'sha256-' + createHash('sha256').update(data).digest('base64')];
