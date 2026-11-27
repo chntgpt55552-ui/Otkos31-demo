@@ -3,7 +3,7 @@ function propose({work,completed,quantity,specification,actual}){
  const valid=n=>typeof n==='number'&&Number.isFinite(n)&&n>=0;
  if(!work||work.id==null||work.orderId==null||!valid(work.qty)||work.qty===0||!valid(completed)||!valid(quantity)||quantity===0||completed+quantity>work.qty+1e-8)throw Error('Некорректный объём работ');
  const rows=new Map();
- const key=r=>JSON.stringify([r.materialId,r.unit,r.prepared===true]);
+ const key=r=>JSON.stringify([r.materialId,r.unit,(r.prepared===true||r.preparedConsumption===true)]);
  for(const r of specification){
   if(String(r.workId)!==String(work.id)||String(r.orderId)!==String(work.orderId))continue;
   if(r.cutSource===true||r.customerOwned===true)continue;
