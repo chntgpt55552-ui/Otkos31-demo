@@ -22,3 +22,5 @@ const partial=group({...args,journal:result,needs:{issues:[],rows:[{id:'a',defic
 assert.equal(partial.length,3);
 assert.equal(result.length,2);
 console.log('Purchase group regression passed');
+
+for(const deficit of [NaN,Infinity,undefined,-1,0]) assert.throws(()=>group({...args,needs:{issues:[],rows:[{id:'a',deficit}]},lines:[line('1','a',1)]}),/Потребность/);
