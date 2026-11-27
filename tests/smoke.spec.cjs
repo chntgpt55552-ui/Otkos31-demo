@@ -447,6 +447,12 @@ test('group purchase form saves once and persists across reload',async({page})=>
  expect(rows.length).toBeGreaterThan(0);
  expect(new Set(rows.map(t=>t.purchaseGroupId)).size).toBe(1);
  expect(new Set(rows.map(t=>t.materialId)).size).toBe(rows.length);
+ const afterNeeds=await page.evaluate(()=>window.otPurchaseNeeds(window.otStockJournal(),window.otMaterialCore.read().items));
+ expect(afterNeeds.issues).toEqual([]);
+ expect(afterNeeds.rows.find(n=>n.id===fixture)?.deficit||0).toBeCloseTo(0);
+ const physical=await page.evaluate(id=>window.otStockReport(window.otStockJournal(),window.otMaterialCore.read().items).rows.find(r=>r.id===id)?.locations['Основной склад']||0,fixture);
+ expect(physical).toBeCloseTo(0);
+ expect(rows.every(t=>!t.done&&!t.paid)).toBe(true);
  const duplicate=await page.evaluate(rows=>{try{window.otAddPurchaseGroup({requestId:rows[0].purchaseGroupId,supplier:rows[0].counterparty,lines:rows});return false}catch(e){return true}},rows);
  expect(duplicate).toBe(true);
  await page.reload();
