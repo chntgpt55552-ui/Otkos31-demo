@@ -12,3 +12,5 @@ test('already consumed material never generates negative usage',()=>assert.deepE
 test('rejects excess work and invalid specification',()=>{assert.throws(()=>propose({completed:35}));assert.throws(()=>propose({specification:[{...row,qty:-1}]}));});
 test('prepared material remains distinct from raw material',()=>assert.equal(propose({specification:[row,{...row,prepared:true}]}).length,2));
 test('pending stock and damage do not count as productive consumption',()=>assert.equal(propose({actual:[{...row,qty:2,kind:'stockOut',done:false},{...row,qty:2,kind:'stockOut',done:true,materialAction:'damage'}]})[0].qty,5));
+
+test('actual prepared consumption uses production journal marker',()=>assert.equal(propose({specification:[{...row,prepared:true}],actual:[{...row,qty:2,kind:'stockOut',done:true,preparedConsumption:true} ]})[0].qty,3));
