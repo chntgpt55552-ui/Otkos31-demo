@@ -355,6 +355,8 @@ test('stage consumes available brigade stock and posts wage once',async({page})=
  expect(result.entries).toHaveLength(2);
  expect(result.entries[0].amount).toBe(Math.round(result.qty*300*100)/100);
  expect(result.entries[1].qty).toBe(result.q);
+ expect(result.entries[1].workId).toBe(result.entries[0].workId);
+ expect(result.entries[1].stageId).toBe(result.entries[0].stageId);
  expect(result.balance).toBeCloseTo(0);
  expect(result.rejected).toBe(true);
  expect(result.unchanged).toBe(true);
