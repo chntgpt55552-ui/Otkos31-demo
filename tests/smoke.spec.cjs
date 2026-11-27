@@ -303,3 +303,24 @@ test('control order: partial wage survives repeated reload without duplication',
  expect(again.map(t=>String(t.id))).toEqual(ids);
  expect(again.reduce((sum,t)=>sum+Number(t.amount),0)).toBe(rows[0].amount);
 });
+
+test('real stage commit rejects insufficient stock without changing journal',async({page})=>{
+ await page.goto('http://127.0.0.1:8080/');
+ const result=await page.evaluate(()=>{
+  const journal=window.otStockJournal();
+  const work=journal.find(t=>t.kind==='accrual'&&!t.done&&Number(t.qty)>0&&!journal.some(x=>x.kind==='salaryPlan'&&String(x.workId)===String(t.id)&&String(x.orderId)===String(t.orderId)));
+  const material=window.otMaterialCore.read().items.find(m=>window.otMaterialCore.units(m).some(u=>u.factor>0));
+  if(!work||!material)throw Error('Missing control fixture');
+  const unit=window.otMaterialCore.units(material).find(u=>u.factor>0).name;
+  const brigade={id:'atomic-test-empty-crew',name:'Контроль',members:['Монтажник']};
+  const qty=Number(work.qty)/2;
+  const plan=window.OtBrigadeWork.allocate({work,assignments:[{brigadeId:brigade.id,qty}],brigadeIds:[brigade.id]});
+  let error='';
+  try{window.otCommitBrigadeStage({plan,event:{id:'atomic-test-stage',workId:work.id,brigadeId:brigade.id,qty,date:'2026-11-27'},work,brigade,rate:300,usage:[{materialId:material.id,unit,qty:1000000000}]});}catch(e){error=e.message;}
+  return {error,unchanged:JSON.stringify(journal)===JSON.stringify(window.otStockJournal()),before:journal};
+ });
+ expect(result.error).not.toBe('');
+ expect(result.unchanged).toBe(true);
+ await page.reload();
+ expect(await page.evaluate(()=>window.otStockJournal())).toEqual(result.before);
+});
