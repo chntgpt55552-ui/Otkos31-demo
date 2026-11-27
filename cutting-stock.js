@@ -52,7 +52,7 @@ function purchaseGroup({journal,needs,requestId,supplier,lines,baseQuantity}){
  const seen=new Set(), ids=new Set(journal.map(t=>String(t.id)));
  const additions=lines.map(t=>{
  const key=String(t.materialId),need=needs.rows.find(n=>String(n.id)===key);
- if(t.id==null||ids.has(String(t.id))||seen.has(key)||!need||t.kind!=='purchase'||t.orderId!=null||t.done!==false||t.paid!==false||t.counterparty!==supplier||!t.location||!t.date||!Number.isFinite(t.amount)||t.amount<0)throw Error('Некорректная позиция заявки');
+ if(t.id==null||!String(t.id).trim()||t.materialId==null||!String(t.materialId).trim()||ids.has(String(t.id))||seen.has(key)||!need||t.kind!=='purchase'||t.orderId!=null||t.done!==false||t.paid!==false||t.counterparty!==supplier||!t.location||!t.date||!Number.isFinite(t.amount)||t.amount<0)throw Error('Некорректная позиция заявки');
  const q=baseQuantity(t,need);
  if(!Number.isFinite(need.deficit)||need.deficit<=0||!Number.isFinite(q)||q<=0||q>need.deficit+1e-9)throw Error('Потребность изменилась');
  seen.add(key);ids.add(String(t.id));
