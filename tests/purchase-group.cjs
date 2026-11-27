@@ -24,3 +24,5 @@ assert.equal(result.length,2);
 console.log('Purchase group regression passed');
 
 for(const deficit of [NaN,Infinity,undefined,-1,0]) assert.throws(()=>group({...args,needs:{issues:[],rows:[{id:'a',deficit}]},lines:[line('1','a',1)]}),/Потребность/);
+
+for(const id of ['', '   ', null]) assert.throws(()=>group({...args,lines:[line(id,'a',1)]}),/Некорректная позиция/);
