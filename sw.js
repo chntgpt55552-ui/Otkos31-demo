@@ -1,8 +1,8 @@
-const CACHE='otkos31-demo-v127-preview31.5-b244bbca66e7fd06';
+const CACHE='otkos31-demo-v127-preview31.5-1a2c0ae2100b6a28';
 const ASSETS=[
  [
   "./",
-  "sha256-kY4m1EYrjVkqHNMpuSatfhGYw+4lE5lC0pvj9kU7Y0A="
+  "sha256-GGEZaMaqeuhEa81IynTZkI3FA4b9XUOAOaqYwSnWX10="
  ],
  [
   "icon-512.png",
@@ -71,6 +71,10 @@ const ASSETS=[
  [
   "brigade-stage.js",
   "sha256-FqT8iyvPbx380ByGeyA7oTQjpRcuC3uR7BuiOrQMqZ0="
+ ],
+ [
+  "material-usage-plan.js",
+  "sha256-v9FJNBBtYbWl3nDPCrLGw+KeI1XkCf0cedxsJ8Y8IcA="
  ],
  [
   "brigade-card.js",
