@@ -451,4 +451,7 @@ test('group purchase form saves once and persists across reload',async({page})=>
  expect(duplicate).toBe(true);
  await page.reload();
  expect(await page.evaluate(()=>window.otStockJournal().filter(t=>t.purchaseGroupId))).toEqual(rows);
+ const replay=await page.evaluate(rows=>{try{window.otAddPurchaseGroup({requestId:rows[0].purchaseGroupId,supplier:rows[0].counterparty,lines:rows});return false}catch(e){return true}},rows);
+ expect(replay).toBe(true);
+ expect(await page.evaluate(()=>window.otStockJournal().filter(t=>t.purchaseGroupId))).toEqual(rows);
 });
