@@ -26,3 +26,12 @@ console.log('Purchase group regression passed');
 for(const deficit of [NaN,Infinity,undefined,-1,0]) assert.throws(()=>group({...args,needs:{issues:[],rows:[{id:'a',deficit}]},lines:[line('1','a',1)]}),/Потребность/);
 
 for(const id of ['', '   ', null]) assert.throws(()=>group({...args,lines:[line(id,'a',1)]}),/Некорректная позиция/);
+
+// A failed batch must not mutate an existing journal or the input lines.
+const existing=structuredClone(result);
+const attempted=[line('5','a',1),line('6','b',99)];
+const before=structuredClone(attempted);
+assert.throws(()=>group({...args,journal:existing,requestId:'atomic-failure',lines:attempted}),/Потребность/);
+assert.deepEqual(existing,result);
+assert.deepEqual(attempted,before);
+assert.throws(()=>group({...args,journal:existing,requestId:'new-request',lines:[line('1','a',1)]}),/Некорректная позиция/);
