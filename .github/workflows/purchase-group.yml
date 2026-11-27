@@ -1,5 +1,6 @@
 name: Purchase group regression
 on:
+  workflow_dispatch:
   push:
     branches: [feature/measurement-spec-3]
   pull_request:
@@ -14,4 +15,7 @@ jobs:
         with:
           node-version: '22'
       - run: node tests/purchase-group.cjs
+      - run: node tests/completion-atomicity.test.cjs
+      - run: node tests/material-usage-plan.test.cjs
+      - run: node tests/procurement-proposal.test.cjs
       - run: node scripts/sync-pwa.cjs --check
