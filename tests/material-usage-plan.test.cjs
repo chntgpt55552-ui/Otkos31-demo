@@ -14,3 +14,5 @@ test('prepared material remains distinct from raw material',()=>assert.equal(pro
 test('pending stock and damage do not count as productive consumption',()=>assert.equal(propose({actual:[{...row,qty:2,kind:'stockOut',done:false},{...row,qty:2,kind:'stockOut',done:true,materialAction:'damage'}]})[0].qty,5));
 
 test('actual prepared consumption uses production journal marker',()=>assert.equal(propose({specification:[{...row,prepared:true}],actual:[{...row,qty:2,kind:'stockOut',done:true,preparedConsumption:true} ]})[0].qty,3));
+
+test('specification linkage preserves original position and rejects cross-order links',()=>{const position={...row,workId:undefined,id:'p',kind:'stockOut',origin:'Спецификация',done:false};const args={position,work:{...work,kind:'accrual'},material:{id:'foam'},unit:'баллон'};const linked=globalThis.OtMaterialUsagePlan.link(args);assert.equal(linked.workId,'w');assert.equal(linked.id,'p');assert.equal(position.workId,undefined);assert.throws(()=>globalThis.OtMaterialUsagePlan.link({...args,work:{...args.work,orderId:'other'}}));assert.throws(()=>globalThis.OtMaterialUsagePlan.link({...args,position:{...position,done:true}}));});
