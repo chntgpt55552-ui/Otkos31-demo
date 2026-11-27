@@ -26,3 +26,6 @@ test('missing preferred supplier remains unassigned',()=>{
 test('incompatible units cannot be silently merged',()=>{
  assert.throws(()=>propose({shortages:[row(),row({unit:'кг',orderId:'b'})],suppliers:[offer()]}),/Несовместимые/);
 });
+
+test('shared incoming quantity is allocated once across orders',()=>{const r=propose({shortages:[row({expected:8}),row({expected:8,orderId:'b'})],suppliers:[offer()]});assert.equal(r.requests[0].items[0].qty,12);assert.deepEqual(r.requests[0].items[0].orders.map(x=>x.qty),[2,10]);});
+test('inconsistent shared incoming snapshots are rejected',()=>{assert.throws(()=>propose({shortages:[row({expected:8}),row({expected:4,orderId:'b'})],suppliers:[offer()]}),/Несогласованный/);});
