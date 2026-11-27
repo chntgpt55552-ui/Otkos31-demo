@@ -1,8 +1,8 @@
-const CACHE='otkos31-demo-v127-preview31.4-fde2bf548867ab65';
+const CACHE='otkos31-demo-v127-preview31.5-6e749ab14bda2c8d';
 const ASSETS=[
  [
   "./",
-  "sha256-TF+LFMMWkbS08Bty67EMwXqzTR/WmHcDGHS9/WUys9k="
+  "sha256-kY4m1EYrjVkqHNMpuSatfhGYw+4lE5lC0pvj9kU7Y0A="
  ],
  [
   "icon-512.png",
