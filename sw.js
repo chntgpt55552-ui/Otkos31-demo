@@ -1,8 +1,8 @@
-const CACHE='otkos31-demo-v127-preview31.5-a1ff0c49155d4b3b';
+const CACHE='otkos31-demo-v127-preview31.5-396080dccff9d097';
 const ASSETS=[
  [
   "./",
-  "sha256-+ZVpUFmzDp4kn0d5UbmgeltxVI7NTVeqhNtqIa+w1bk="
+  "sha256-iVTM2W2InhrQO8wx+vpCL9nvCj4F7/J9qN1ymhzzg3M="
  ],
  [
   "icon-512.png",
@@ -82,7 +82,7 @@ const ASSETS=[
  ],
  [
   "cutting-stock.js",
-  "sha256-u7j03BWHxBM+uVfpp9sM1H5Xm+uiQ/MOXgRb7/Qodl0="
+  "sha256-eyd11B0MeVlIFOwwuuEYtn9hp+JjoJkPzBVf1LR1NxM="
  ],
  [
   "cutting-engine.js",
