@@ -115,9 +115,45 @@ const ASSETS=[
 ];
 const ROOT=new URL('./',self.registration.scope).href;
 const URLS=new Set(ASSETS.map(([p])=>new URL(p,ROOT).href));
-self.addEventListener('install',e=>e.waitUntil((async()=>{
- const cache=await caches.open(CACHE);
- await cache.addAll(ASSETS.map(([p,integrity])=>new Request(new URL(p,ROOT),{cache:'reload',integrity})));
+async function verified(response, integrity) {
+ if (!response || !response.ok) throw Error(response ? 'HTTP ' + response.status : 'Нет файла');
+ const bytes = await response.clone().arrayBuffer();
+ const digest = new Uint8Array(await crypto.subtle.digest('SHA-256',bytes));
+ if ('sha256-' + btoa(String.fromCharCode(...digest)) !== integrity) throw Error('Содержимое отличается от сборки');
+ return response;
+}
+async function storeAsset(cache, prior, [path,integrity]) {
+ const url = new URL(path,ROOT);
+ // Reuse only bytes verified against the NEW release, including on an intermittent connection.
+ if (prior) {
+  let existing;
+  try { existing = await verified(await prior.match(url),integrity); } catch { /* Fetch changed or missing files. */ }
+  if (existing) { await cache.put(url,existing); return; }
+ }
+ for (let attempt=0;attempt<2;attempt++) {
+  const request = new URL(url);
+  if (attempt) request.searchParams.set('ot_release',CACHE);
+  try {
+   const response = await fetch(request,{cache:'no-store',credentials:'same-origin'});
+   await cache.put(url,await verified(response,integrity));
+   return;
+  } catch (error) { if (attempt) throw Error(path+' — '+error.message); }
+ }
+}
+self.addEventListener('install',event=>event.waitUntil((async()=>{
+ try {
+  const names = await caches.keys();
+  const previous = names.filter(name=>name.startsWith('otkos31-demo-v') && name!==CACHE).at(-1);
+  const prior = previous ? await caches.open(previous) : null;
+  const cache = await caches.open(CACHE);
+  for (let i=0;i<ASSETS.length;i+=4) {
+   await Promise.all(ASSETS.slice(i,i+4).map(asset=>storeAsset(cache,prior,asset)));
+  }
+ } catch (error) {
+  const clients = await self.clients.matchAll({type:'window',includeUncontrolled:true});
+  for (const client of clients) client.postMessage({type:'OT_UPDATE_ERROR',message:error.message});
+  throw error;
+ }
 })()));
 self.addEventListener('message',e=>{if(e.data==='ACTIVATE_UPDATE')e.waitUntil(self.skipWaiting());});
 self.addEventListener('activate',e=>e.waitUntil((async()=>{

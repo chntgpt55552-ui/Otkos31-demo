@@ -10,13 +10,14 @@ const previous = 'e54d2076bcea77fd4ee06e9685b405db9409f7bf';
 const version = fs.readFileSync('index.html','utf8').match(/window.otVersion = '([^']+)'/)[1];
 const legacy = new Map();
 let stage = 'legacy';
+let retriedShell = false;
 function content(path) {
  if (stage === 'legacy') {
   if (!legacy.has(path)) legacy.set(path,execFileSync('git',['show',previous + ':' + path]));
   return legacy.get(path);
  }
  const file = fs.readFileSync(path);
- if (stage === 'broken' && path === 'assistant-rules.js') return 'invalid release';
+ if (stage === 'broken' && path === 'index.html') return 'invalid release';
  return file;
 }
 async function run() {
@@ -25,6 +26,13 @@ async function run() {
   if (!/^[\w.-]+$/.test(path) || !fs.existsSync(path)) { res.writeHead(404).end(); return; }
   res.setHeader('content-type',path.endsWith('.js')?'application/javascript':path.endsWith('.html')?'text/html':'application/octet-stream');
   res.setHeader('cache-control','no-store');
+  if (stage === 'retry-shell' && path === 'index.html') {
+   if (!new URL(req.url,'http://localhost').searchParams.has('ot_release')) {
+    res.end('stale response');
+    return;
+   }
+   retriedShell = true;
+  }
   res.end(content(path));
  });
  await new Promise(resolve => server.listen(0,'127.0.0.1',resolve));
@@ -44,9 +52,11 @@ async function run() {
   stage = 'broken';
   await page.evaluate(async()=>{const r=await navigator.serviceWorker.ready;await r.update();const w=r.installing;if(w) await new Promise(done=>w.addEventListener('statechange',()=>{if(w.state==='redundant')done();}));});
   assert.equal(await page.evaluate(()=>window.otVersion),'127-preview29.1');
-  stage = 'current';
+  stage = 'retry-shell';
   await Promise.all([page.waitForNavigation(),page.locator('#ot-update-button').click()]);
   await page.waitForFunction(async()=>!!(await navigator.serviceWorker.ready).waiting);
+  assert.equal(retriedShell,true);
+  stage = 'current';
   await page.waitForFunction(k=>!!localStorage.getItem(k),backup);
   const workers = context.serviceWorkers();
   const installed = workers.at(-1);
