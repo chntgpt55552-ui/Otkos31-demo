@@ -410,3 +410,27 @@ test('specification proposal drives two persisted partial stages',async({page})=
  await page.reload();
  expect(await page.evaluate(()=>window.otStockJournal())).toEqual(result.after);
 });
+
+test('group purchase form saves once and persists across reload',async({page})=>{
+ await page.goto('http://127.0.0.1:8080/');
+ await page.locator('#ot-module-nav [data-module=stock]').click();
+ await page.getByText(/^Потребность в закупках ·/).click();
+ await page.getByRole('button',{name:'+ Групповая закупка',exact:true}).click();
+ const form=page.locator('#ot-module-page');
+ await expect(form.getByRole('heading',{name:'Групповая закупка'})).toBeVisible();
+ await form.locator('select').first().selectOption({index:1});
+ const prices=form.locator('input[type=number]').filter({hasNot:page.locator('unused')});
+ const count=await prices.count();
+ expect(count).toBeGreaterThan(0);
+ for(let i=1;i<count;i+=2)await prices.nth(i).fill('100');
+ await form.getByRole('button',{name:'✓ Создать заявку'}).click();
+ await expect(form.getByRole('heading',{name:'Групповая закупка'})).toHaveCount(0);
+ const rows=await page.evaluate(()=>window.otStockJournal().filter(t=>t.purchaseGroupId));
+ expect(rows.length).toBeGreaterThan(0);
+ expect(new Set(rows.map(t=>t.purchaseGroupId)).size).toBe(1);
+ expect(new Set(rows.map(t=>t.materialId)).size).toBe(rows.length);
+ const duplicate=await page.evaluate(rows=>{try{window.otAddPurchaseGroup({requestId:rows[0].purchaseGroupId,supplier:rows[0].counterparty,lines:rows});return false}catch(e){return true}},rows);
+ expect(duplicate).toBe(true);
+ await page.reload();
+ expect(await page.evaluate(()=>window.otStockJournal().filter(t=>t.purchaseGroupId))).toEqual(rows);
+});
