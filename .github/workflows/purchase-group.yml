@@ -15,7 +15,5 @@ jobs:
         with:
           node-version: '22'
       - run: node tests/purchase-group.cjs
-      - run: node tests/completion-atomicity.test.cjs
-      - run: node tests/material-usage-plan.test.cjs
-      - run: node tests/procurement-proposal.test.cjs
+      - run: node --test tests/*.test.cjs
       - run: node scripts/sync-pwa.cjs --check
