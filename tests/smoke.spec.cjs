@@ -413,13 +413,29 @@ test('specification proposal drives two persisted partial stages',async({page})=
 
 test('group purchase form saves once and persists across reload',async({page})=>{
  await page.goto('http://127.0.0.1:8080/');
+ const fixture=await page.evaluate(()=>{
+ const key='otkos31_orders_alzex_one_journal_v1';
+ const db=JSON.parse(window.otStorage.getItem(key));
+ const materials=window.otMaterialCore.read().items;
+ const m=materials.find(m=>window.otMaterialCore.units(m).some(u=>u.name===m.unit&&u.factor===1));
+ const order=db.orders.find(o=>!o.archived);
+ const t={id:'group-test-demand',kind:'stockOut',orderId:order.id,group:'Материалы',article:'Основные материалы',name:m.name,qty:100000,unit:m.unit,price:0,amount:0,done:false,paid:false,origin:'Спецификация',date:new Date().toLocaleDateString('sv-SE'),location:'Основной склад'};
+ Object.assign(t,window.otMaterialCore.bind(t,m.id,null));
+ db.journal.push(t);
+ window.otStorage.setItem(key,JSON.stringify(db));
+ return m.id;
+ });
+ await page.reload();
+ const needs=await page.evaluate(()=>window.otPurchaseNeeds(window.otStockJournal(),window.otMaterialCore.read().items));
+ expect(needs.issues).toEqual([]);
+ expect(needs.rows.find(n=>n.id===fixture).deficit).toBeGreaterThan(0);
  await page.locator('#ot-module-nav [data-module=stock]').click();
  await page.getByText(/^Потребность в закупках ·/).click();
  await page.getByRole('button',{name:'+ Групповая закупка',exact:true}).click();
  const form=page.locator('#ot-module-page');
  await expect(form.getByRole('heading',{name:'Групповая закупка'})).toBeVisible();
  await form.locator('select').first().selectOption({index:1});
- const prices=form.locator('input[type=number]').filter({hasNot:page.locator('unused')});
+ const prices=form.locator('input[type=number]');
  const count=await prices.count();
  expect(count).toBeGreaterThan(0);
  for(let i=1;i<count;i+=2)await prices.nth(i).fill('100');
