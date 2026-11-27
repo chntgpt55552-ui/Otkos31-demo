@@ -453,5 +453,7 @@ test('group purchase form saves once and persists across reload',async({page})=>
  expect(await page.evaluate(()=>window.otStockJournal().filter(t=>t.purchaseGroupId))).toEqual(rows);
  const replay=await page.evaluate(rows=>{try{window.otAddPurchaseGroup({requestId:rows[0].purchaseGroupId,supplier:rows[0].counterparty,lines:rows});return false}catch(e){return true}},rows);
  expect(replay).toBe(true);
+ const freshIdReplay=await page.evaluate(rows=>{try{window.otAddPurchaseGroup({requestId:'fresh-replay-request',supplier:rows[0].counterparty,lines:rows.map((t,i)=>({...t,id:'fresh-replay-line-'+i,purchaseGroupId:undefined}))});return false}catch(e){return true}},rows);
+ expect(freshIdReplay).toBe(true);
  expect(await page.evaluate(()=>window.otStockJournal().filter(t=>t.purchaseGroupId))).toEqual(rows);
 });
