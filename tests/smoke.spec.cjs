@@ -324,3 +324,37 @@ test('real stage commit rejects insufficient stock without changing journal',asy
  await page.reload();
  expect(await page.evaluate(()=>window.otStockJournal())).toEqual(result.before);
 });
+
+test('stage consumes available brigade stock and posts wage once',async({page})=>{
+ await page.goto('http://127.0.0.1:8080/');
+ const result=await page.evaluate(()=>{
+  const materials=window.otMaterialCore.read().items;
+  const journal=window.otStockJournal();
+  const work=journal.find(t=>t.kind==='accrual'&&!t.done&&Number(t.qty)>0&&!journal.some(x=>x.kind==='salaryPlan'&&String(x.workId)===String(t.id)&&String(x.orderId)===String(t.orderId)));
+  const report=window.otStockReport(journal,materials);
+  const row=report.rows.find(r=>r.locations['Основной склад']>0&&materials.some(m=>m.id===r.id));
+  if(!work||!row)throw Error('Missing positive stock fixture');
+  const material=materials.find(m=>m.id===row.id);
+  const brigade={id:'control-stock-crew',name:'Контроль',members:['Монтажник']};
+  const date=new Date().toLocaleDateString('sv-SE');
+  const q=row.locations['Основной склад']/2;
+  const move=window.OtObjectStock.movement({id:'control-stock-move',material,unit:material.unit,qty:q,date,from:{type:'main'},to:{type:'brigade',id:brigade.id}});
+  window.otAddStockMove(move);
+  const qty=Number(work.qty)/2;
+  const plan=window.OtBrigadeWork.allocate({work,assignments:[{brigadeId:brigade.id,qty}],brigadeIds:[brigade.id]});
+  const args={plan,event:{id:'control-stock-stage',workId:work.id,brigadeId:brigade.id,qty,date},work,brigade,rate:300,usage:[{materialId:material.id,unit:material.unit,qty:q}]};
+  const posted=window.otCommitBrigadeStage(args);
+  const after=window.otStockJournal();
+  let rejected=false;
+  try{window.otCommitBrigadeStage(args)}catch(e){rejected=true}
+  return {entries:posted.entries,rejected,unchanged:JSON.stringify(after)===JSON.stringify(window.otStockJournal()),after,qty,q,balance:window.otStockReport(after,materials).rows.find(r=>r.id===row.id).locations['brigade:'+brigade.id]||0};
+ });
+ expect(result.entries).toHaveLength(2);
+ expect(result.entries[0].amount).toBe(Math.round(result.qty*300*100)/100);
+ expect(result.entries[1].qty).toBe(result.q);
+ expect(result.balance).toBeCloseTo(0);
+ expect(result.rejected).toBe(true);
+ expect(result.unchanged).toBe(true);
+ await page.reload();
+ expect(await page.evaluate(()=>window.otStockJournal())).toEqual(result.after);
+});
