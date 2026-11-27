@@ -273,3 +273,33 @@ test('partial execution posts wage and persists after reload',async({page})=>{
  expect(rows[0].amount).toBe(Math.round(work.qty/2*300*100)/100);
  expect(rows[0].paid).toBe(false);
 });
+
+test('control order: partial wage survives repeated reload without duplication',async({page})=>{
+ await page.goto('http://127.0.0.1:8080/');
+ await page.evaluate(()=>{const key='otkos31_tx_directories_v1';const d=JSON.parse(window.otStorage.getItem(key)||'{}');d.brigadesV1=[{id:'test-crew',name:'Тестовая бригада',leader:'Монтажник',members:['Монтажник'],date:'2026-11-27',archived:false}];window.otStorage.setItem(key,JSON.stringify(d));});
+ const work=await page.evaluate(()=>window.otStockJournal().find(t=>t.kind==='accrual'&&!t.done&&Number(t.qty)>0));
+ await page.locator('[data-orders-open="'+work.orderId+'"]').click();
+ await page.locator('[data-oc-route="finance"]').click();
+ await page.locator('#az-app [data-mode=list]').click();
+ await page.locator('#az-content .az-grow[data-edit="'+work.id+'"]').click();
+ await page.locator('#az-status-toggle').click();
+ await page.locator('#az-status-menu [data-status="confirmed"]').click();
+ const dialog=page.locator('dialog[open]');
+ await dialog.locator('select').selectOption('test-crew');
+ await dialog.locator('input[type=number]').nth(0).fill(String(work.qty/2));
+ await dialog.locator('input[type=number]').nth(1).fill('300');
+ page.on('dialog',async d=>{if(d.type()==='confirm')await d.accept();else await d.dismiss();});
+ await dialog.getByRole('button',{name:'Подтвердить и начислить'}).click();
+ await expect(dialog).toHaveCount(0);
+ await page.reload();
+ const rows=await page.evaluate(w=>window.otStockJournal().filter(t=>String(t.orderId)===String(w.orderId)&&String(t.workId)===String(w.id)&&t.stageId),work);
+ expect(rows).toHaveLength(1);
+ expect(rows[0].qty).toBe(work.qty/2);
+ expect(rows[0].amount).toBe(Math.round(work.qty/2*300*100)/100);
+ expect(rows[0].paid).toBe(false);
+ const ids=rows.map(t=>String(t.id));
+ await page.reload();
+ const again=await page.evaluate(w=>window.otStockJournal().filter(t=>String(t.orderId)===String(w.orderId)&&String(t.workId)===String(w.id)&&t.stageId),work);
+ expect(again.map(t=>String(t.id))).toEqual(ids);
+ expect(again.reduce((sum,t)=>sum+Number(t.amount),0)).toBe(rows[0].amount);
+});
