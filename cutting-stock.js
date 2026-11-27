@@ -22,5 +22,28 @@ function resolve({materials,report,bindings,ledger,location,width,height}){
  }
  return {costs,stock,remnants};
 }
-root.OtCutStock={resolve};
+function shortage({required,available,incoming=0}){
+ if(![required,available,incoming].every(n=>Number.isSafeInteger(n)&&n>=0))throw Error('Некорректное количество целых листов');
+ const missing=Math.max(0,required-available);
+ return {missing,toPurchase:Math.max(0,missing-incoming)};
+}
+function allocate({available,incoming=0,demands}){
+ if(![available,incoming].every(n=>Number.isSafeInteger(n)&&n>=0)||!Array.isArray(demands))throw Error('Некорректный запас');
+ const seen=new Set();
+ return demands.map(d=>{
+ if(d.orderId==null||seen.has(String(d.orderId))||!Number.isSafeInteger(d.required)||d.required<0)throw Error('Некорректная потребность заказа');
+ seen.add(String(d.orderId));
+ const onHand=Math.min(available,d.required);available-=onHand;
+ const expected=Math.min(incoming,d.required-onHand);incoming-=expected;
+ return {...d,onHand,expected,toPurchase:d.required-onHand-expected};
+ });
+}
+function pendingSheets({journal,material,location,baseQuantity}){
+ return journal.filter(t=>t.kind==='purchase'&&!t.done&&t.materialId===material.id&&t.location===location).reduce((n,t)=>{
+ const q=baseQuantity(t,material);
+ if(!Number.isFinite(q)||q<=0)throw Error('Некорректная ожидаемая закупка');
+ return n+(Math.abs(q-Math.round(q))<1e-8?Math.round(q):0);
+ },0);
+}
+root.OtCutStock={resolve,shortage,allocate,pendingSheets};
 })(globalThis);

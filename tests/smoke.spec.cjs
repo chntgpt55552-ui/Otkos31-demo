@@ -203,6 +203,9 @@ test('posted payment updates cash and debt exactly once',async({page})=>{
 
 test('release cache replaces obsolete app cache without touching unrelated caches',async({page})=>{
  await page.goto('http://127.0.0.1:8080/');
+ const source=await (await page.request.get('http://127.0.0.1:8080/sw.js')).text();
+ const cacheName=source.match(/const CACHE='([^']+)'/)?.[1];
+ expect(cacheName).toMatch(/^otkos31-demo-/);
  await page.evaluate(async()=>{
  await caches.open('otkos31-demo-obsolete-test');
  await caches.open('unrelated-test');
@@ -210,7 +213,7 @@ test('release cache replaces obsolete app cache without touching unrelated cache
  await reg.unregister();
  });
  await page.reload();
- await expect.poll(()=>page.evaluate(async()=>{const keys=await caches.keys();return keys.includes('otkos31-demo-v126-3-127-preview29.1')&&!keys.includes('otkos31-demo-obsolete-test')&&keys.includes('unrelated-test')})).toBe(true);
+ await expect.poll(()=>page.evaluate(async(name)=>{const keys=await caches.keys();return keys.includes(name)&&!keys.includes('otkos31-demo-obsolete-test')&&keys.includes('unrelated-test')},cacheName)).toBe(true);
 });
 
 test('profit drilldown uses standard financial tree and list',async({page})=>{
@@ -225,4 +228,136 @@ test('profit drilldown uses standard financial tree and list',async({page})=>{
  await page.locator('#ot-clear-branch').click();
  await expect(page.locator('#az-stats')).toContainText('Получено');
  expect(errors).toEqual([]);
+});
+
+test('original transaction status opens partial execution dialog without posting on cancel',async({page})=>{
+ await page.goto('http://127.0.0.1:8080/');
+ const work=await page.evaluate(()=>window.otStockJournal().find(t=>t.kind==='accrual'&&!t.done&&Number(t.qty)>0));
+ expect(work).toBeTruthy();
+ await page.locator('[data-orders-open="'+work.orderId+'"]').click();
+ await page.locator('[data-oc-route="finance"]').click();
+ await page.locator('#az-app [data-mode=list]').click();
+ await page.locator('#az-content .az-grow[data-edit="'+work.id+'"]').click();
+ await page.locator('#az-status-toggle').click();
+ await page.locator('#az-status-menu [data-status="confirmed"]').click();
+ const dialog=page.locator('dialog[open]');
+ await expect(dialog).toContainText('Подтверждение исполнения');
+ await expect(dialog).toContainText('Бригада');
+ await dialog.getByRole('button',{name:'Частично',exact:true}).click();
+ await expect(dialog.locator('input[type=number]').first()).toHaveValue('');
+ await dialog.getByRole('button',{name:'Закрыть',exact:true}).click();
+ expect(await page.evaluate(id=>window.otStockJournal().find(t=>t.id===id).done,work.id)).toBeFalsy();
+});
+
+test('partial execution posts wage and persists after reload',async({page})=>{
+ await page.goto('http://127.0.0.1:8080/');
+ await page.evaluate(()=>{const key='otkos31_tx_directories_v1';const d=JSON.parse(window.otStorage.getItem(key)||'{}');d.brigadesV1=[{id:'test-crew',name:'Тестовая бригада',leader:'Монтажник',members:['Монтажник'],date:'2026-11-27',archived:false}];window.otStorage.setItem(key,JSON.stringify(d));});
+ const work=await page.evaluate(()=>window.otStockJournal().find(t=>t.kind==='accrual'&&!t.done&&Number(t.qty)>0));
+ await page.locator('[data-orders-open="'+work.orderId+'"]').click();
+ await page.locator('[data-oc-route="finance"]').click();
+ await page.locator('#az-app [data-mode=list]').click();
+ await page.locator('#az-content .az-grow[data-edit="'+work.id+'"]').click();
+ await page.locator('#az-status-toggle').click();
+ await page.locator('#az-status-menu [data-status="confirmed"]').click();
+ const dialog=page.locator('dialog[open]');
+ await dialog.locator('select').selectOption('test-crew');
+ await dialog.locator('input[type=number]').nth(0).fill(String(work.qty/2));
+ await dialog.locator('input[type=number]').nth(1).fill('300');
+ page.on('dialog',async d=>{if(d.type()==='confirm')await d.accept();else await d.dismiss();});
+ await dialog.getByRole('button',{name:'Подтвердить и начислить'}).click();
+ await expect(dialog).toHaveCount(0);
+ await page.reload();
+ const rows=await page.evaluate(w=>window.otStockJournal().filter(t=>String(t.orderId)===String(w.orderId)&&String(t.workId)===String(w.id)&&t.stageId),work);
+ expect(rows).toHaveLength(1);
+ expect(rows[0].qty).toBe(work.qty/2);
+ expect(rows[0].amount).toBe(Math.round(work.qty/2*300*100)/100);
+ expect(rows[0].paid).toBe(false);
+});
+
+test('control order: partial wage survives repeated reload without duplication',async({page})=>{
+ await page.goto('http://127.0.0.1:8080/');
+ await page.evaluate(()=>{const key='otkos31_tx_directories_v1';const d=JSON.parse(window.otStorage.getItem(key)||'{}');d.brigadesV1=[{id:'test-crew',name:'Тестовая бригада',leader:'Монтажник',members:['Монтажник'],date:'2026-11-27',archived:false}];window.otStorage.setItem(key,JSON.stringify(d));});
+ const work=await page.evaluate(()=>window.otStockJournal().find(t=>t.kind==='accrual'&&!t.done&&Number(t.qty)>0));
+ await page.locator('[data-orders-open="'+work.orderId+'"]').click();
+ await page.locator('[data-oc-route="finance"]').click();
+ await page.locator('#az-app [data-mode=list]').click();
+ await page.locator('#az-content .az-grow[data-edit="'+work.id+'"]').click();
+ await page.locator('#az-status-toggle').click();
+ await page.locator('#az-status-menu [data-status="confirmed"]').click();
+ const dialog=page.locator('dialog[open]');
+ await dialog.locator('select').selectOption('test-crew');
+ await dialog.locator('input[type=number]').nth(0).fill(String(work.qty/2));
+ await dialog.locator('input[type=number]').nth(1).fill('300');
+ page.on('dialog',async d=>{if(d.type()==='confirm')await d.accept();else await d.dismiss();});
+ await dialog.getByRole('button',{name:'Подтвердить и начислить'}).click();
+ await expect(dialog).toHaveCount(0);
+ await page.reload();
+ const rows=await page.evaluate(w=>window.otStockJournal().filter(t=>String(t.orderId)===String(w.orderId)&&String(t.workId)===String(w.id)&&t.stageId),work);
+ expect(rows).toHaveLength(1);
+ expect(rows[0].qty).toBe(work.qty/2);
+ expect(rows[0].amount).toBe(Math.round(work.qty/2*300*100)/100);
+ expect(rows[0].paid).toBe(false);
+ const ids=rows.map(t=>String(t.id));
+ await page.reload();
+ const again=await page.evaluate(w=>window.otStockJournal().filter(t=>String(t.orderId)===String(w.orderId)&&String(t.workId)===String(w.id)&&t.stageId),work);
+ expect(again.map(t=>String(t.id))).toEqual(ids);
+ expect(again.reduce((sum,t)=>sum+Number(t.amount),0)).toBe(rows[0].amount);
+});
+
+test('real stage commit rejects insufficient stock without changing journal',async({page})=>{
+ await page.goto('http://127.0.0.1:8080/');
+ const result=await page.evaluate(()=>{
+  const journal=window.otStockJournal();
+  const work=journal.find(t=>t.kind==='accrual'&&!t.done&&Number(t.qty)>0&&!journal.some(x=>x.kind==='salaryPlan'&&String(x.workId)===String(t.id)&&String(x.orderId)===String(t.orderId)));
+  const material=window.otMaterialCore.read().items.find(m=>window.otMaterialCore.units(m).some(u=>u.factor>0));
+  if(!work||!material)throw Error('Missing control fixture');
+  const unit=window.otMaterialCore.units(material).find(u=>u.factor>0).name;
+  const brigade={id:'atomic-test-empty-crew',name:'Контроль',members:['Монтажник']};
+  const qty=Number(work.qty)/2;
+  const plan=window.OtBrigadeWork.allocate({work,assignments:[{brigadeId:brigade.id,qty}],brigadeIds:[brigade.id]});
+  let error='';
+  try{window.otCommitBrigadeStage({plan,event:{id:'atomic-test-stage',workId:work.id,brigadeId:brigade.id,qty,date:'2026-11-27'},work,brigade,rate:300,usage:[{materialId:material.id,unit,qty:1000000000}]});}catch(e){error=e.message;}
+  return {error,unchanged:JSON.stringify(journal)===JSON.stringify(window.otStockJournal()),before:journal};
+ });
+ expect(result.error).not.toBe('');
+ expect(result.unchanged).toBe(true);
+ await page.reload();
+ expect(await page.evaluate(()=>window.otStockJournal())).toEqual(result.before);
+});
+
+test('stage consumes available brigade stock and posts wage once',async({page})=>{
+ await page.goto('http://127.0.0.1:8080/');
+ const result=await page.evaluate(()=>{
+  const materials=window.otMaterialCore.read().items;
+  const journal=window.otStockJournal();
+  const work=journal.find(t=>t.kind==='accrual'&&!t.done&&Number(t.qty)>0&&!journal.some(x=>x.kind==='salaryPlan'&&String(x.workId)===String(t.id)&&String(x.orderId)===String(t.orderId)));
+  const material=materials.find(m=>window.otMaterialCore.units(m).some(u=>u.name===m.unit&&u.factor===1));
+  if(!work||!material)throw Error('Missing work or material fixture');
+  const brigade={id:'control-stock-crew',name:'Контроль',members:['Монтажник']};
+  const date=new Date().toLocaleDateString('sv-SE');
+  const purchase={id:'control-stock-purchase',kind:'purchase',group:'Закупка материалов',article:'Основные материалы',qty:10,unit:material.unit,price:100,amount:1000,grossAmount:1000,discountAmount:0,discountMode:'percent',discountValue:0,account:window.otAccountRegistry.options()[0].id,location:'Основной склад',counterparty:'Контрольный поставщик',date,done:true,paid:true,origin:'Вручную'};
+  Object.assign(purchase,window.otMaterialCore.bind(purchase,material.id,null));
+  window.otAddStockPurchase(purchase);
+  const row=window.otStockReport(window.otStockJournal(),materials).rows.find(r=>r.id===material.id);
+  if(!row||row.locations['Основной склад']<5)throw Error('Control purchase did not create stock');
+  const q=5;
+  const move=window.OtObjectStock.movement({id:'control-stock-move',material,unit:material.unit,qty:q,date,from:{type:'main'},to:{type:'brigade',id:brigade.id}});
+  window.otAddStockMove(move);
+  const qty=Number(work.qty)/2;
+  const plan=window.OtBrigadeWork.allocate({work,assignments:[{brigadeId:brigade.id,qty}],brigadeIds:[brigade.id]});
+  const args={plan,event:{id:'control-stock-stage',workId:work.id,brigadeId:brigade.id,qty,date},work,brigade,rate:300,usage:[{materialId:material.id,unit:material.unit,qty:q}]};
+  const posted=window.otCommitBrigadeStage(args);
+  const after=window.otStockJournal();
+  let rejected=false;
+  try{window.otCommitBrigadeStage(args)}catch(e){rejected=true}
+  return {entries:posted.entries,rejected,unchanged:JSON.stringify(after)===JSON.stringify(window.otStockJournal()),after,qty,q,balance:window.otStockReport(after,materials).rows.find(r=>r.id===row.id).locations['brigade:'+brigade.id]||0};
+ });
+ expect(result.entries).toHaveLength(2);
+ expect(result.entries[0].amount).toBe(Math.round(result.qty*300*100)/100);
+ expect(result.entries[1].qty).toBe(result.q);
+ expect(result.balance).toBeCloseTo(0);
+ expect(result.rejected).toBe(true);
+ expect(result.unchanged).toBe(true);
+ await page.reload();
+ expect(await page.evaluate(()=>window.otStockJournal())).toEqual(result.after);
 });
