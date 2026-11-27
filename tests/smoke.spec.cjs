@@ -415,7 +415,7 @@ test('group purchase form saves once and persists across reload',async({page})=>
  await page.goto('http://127.0.0.1:8080/');
  const fixture=await page.evaluate(()=>{
  const key='otkos31_orders_alzex_one_journal_v1';
- const db=JSON.parse(window.otStorage.getItem(key));
+ const db=JSON.parse(window.otStorage.getItem(key))||{schemaVersion:1,orders:window.otHomeData().orders,journal:window.otStockJournal()};
  const materials=window.otMaterialCore.read().items;
  const m=materials.find(m=>window.otMaterialCore.units(m).some(u=>u.name===m.unit&&u.factor===1));
  const order=db.orders.find(o=>!o.archived);
