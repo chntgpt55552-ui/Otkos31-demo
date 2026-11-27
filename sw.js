@@ -1,4 +1,4 @@
-const CACHE='otkos31-demo-v127-preview31.5-396080dccff9d097';
+const CACHE='otkos31-demo-v127-preview31.5-73cb689f1a3adfdf';
 const ASSETS=[
  [
   "./",
@@ -82,7 +82,7 @@ const ASSETS=[
  ],
  [
   "cutting-stock.js",
-  "sha256-eyd11B0MeVlIFOwwuuEYtn9hp+JjoJkPzBVf1LR1NxM="
+  "sha256-1uv40KGTBNRlV12B0htfZHKIilG4fx3c73VR3WR7f4Y="
  ],
  [
   "cutting-engine.js",
