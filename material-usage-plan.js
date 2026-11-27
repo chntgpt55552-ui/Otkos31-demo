@@ -25,5 +25,15 @@ function link({position,work,material,unit,prepared=false}){
  if(!material?.id||!unit||position.materialId!==material.id||position.unit!==unit||!Number.isFinite(position.qty)||position.qty<=0)throw Error('Проверьте материал и единицу');
  return {...position,workId:work.id,prepared:prepared===true};
 }
-root.OtMaterialUsagePlan={propose,link};
+function linkJournal({journal,positionId,workId,materials,prepared=false}){
+ const positions=journal.filter(t=>String(t.id)===String(positionId));
+ if(positions.length!==1)throw Error('Позиция отсутствует или неоднозначна');
+ const position=positions[0];
+ const works=journal.filter(t=>t.kind==='accrual'&&String(t.id)===String(workId)&&String(t.orderId)===String(position.orderId));
+ if(works.length!==1)throw Error('Работа отсутствует или неоднозначна');
+ const material=materials.find(m=>m.id===position.materialId);
+ const linked=link({position,work:works[0],material,unit:position.unit,prepared});
+ return journal.map(t=>t===position?linked:t);
+}
+root.OtMaterialUsagePlan={propose,link,linkJournal};
 })(globalThis);
