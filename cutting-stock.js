@@ -45,5 +45,20 @@ function pendingSheets({journal,material,location,baseQuantity}){
  return n+(Math.abs(q-Math.round(q))<1e-8?Math.round(q):0);
  },0);
 }
-root.OtCutStock={resolve,shortage,allocate,pendingSheets};
+function purchaseGroup({journal,needs,requestId,supplier,lines,baseQuantity}){
+ if(!Array.isArray(journal)||!Array.isArray(lines)||!lines.length||typeof requestId!=='string'||!requestId.trim()||typeof supplier!=='string'||!supplier.trim())throw Error('Некорректная заявка');
+ if(journal.some(t=>t.purchaseGroupId===requestId))throw Error('Заявка уже создана');
+ if(!needs||needs.issues.length)throw Error('Ошибки складского журнала');
+ const seen=new Set(), ids=new Set(journal.map(t=>String(t.id)));
+ const additions=lines.map(t=>{
+ const key=String(t.materialId),need=needs.rows.find(n=>String(n.id)===key);
+ if(t.id==null||ids.has(String(t.id))||seen.has(key)||!need||t.kind!=='purchase'||t.orderId!=null||t.done!==false||t.paid!==false||t.counterparty!==supplier||!t.location||!t.date||!Number.isFinite(t.amount)||t.amount<0)throw Error('Некорректная позиция заявки');
+ const q=baseQuantity(t,need);
+ if(!Number.isFinite(q)||q<=0||q>need.deficit+1e-9)throw Error('Потребность изменилась');
+ seen.add(key);ids.add(String(t.id));
+ return {...t,purchaseGroupId:requestId};
+ });
+ return [...journal,...additions];
+}
+root.OtCutStock={resolve,shortage,allocate,pendingSheets,purchaseGroup};
 })(globalThis);
