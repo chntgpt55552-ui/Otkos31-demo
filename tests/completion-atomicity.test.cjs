@@ -34,3 +34,9 @@ test('completion cannot exceed assigned quantity',()=>{
  const f=fixture();
  assert.throws(()=>OtBrigadeCompletion.prepare({...f,event:{...f.event,qty:11}}),/Превышен/);
 });
+
+test('linked completion cannot be repeated even without material lines',()=>{
+ const f=fixture();
+ const p=OtBrigadeCompletion.prepare(f);
+ assert.throws(()=>OtBrigadeCompletion.prepare({...f,materials:[],journal:p.materialEntries}),/Исполнение уже проведено/);
+});
